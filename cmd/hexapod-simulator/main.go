@@ -2,6 +2,9 @@ package main
 
 import (
 	_ "github.com/egonelbre/hexapod/cmd/hexapod-simulator/internal"
+	"github.com/egonelbre/hexapod/pose"
+
+	"github.com/egonelbre/hexapod/adeept"
 	"github.com/egonelbre/hexapod/g"
 
 	"github.com/gen2brain/raylib-go/raylib"
@@ -25,6 +28,8 @@ func main() {
 	raylib.SetCameraMode(camera, raylib.CameraFree)
 	//raylib.SetCameraMode(camera, raylib.CameraOrbital)
 
+	model := NewModel(adeept.ZeroPose())
+
 	raylib.SetTargetFPS(60)
 	for !raylib.WindowShouldClose() {
 		raylib.UpdateCamera(&camera)
@@ -34,8 +39,10 @@ func main() {
 
 		raylib.Begin3dMode(camera)
 		{
-			raylib.DrawGrid(40, g.Length(0.01*g.M).Meters())
+			raylib.DrawGrid(40, 0.01*g.M.Meters())
 			raylib.DrawGizmo(raylib.Vector3{})
+
+			model.Draw()
 		}
 		raylib.End3dMode()
 
@@ -57,4 +64,18 @@ func main() {
 	}
 
 	raylib.CloseWindow()
+}
+
+type Model struct {
+	Pose *pose.Body
+}
+
+func NewModel(pose *pose.Body) *Model {
+	model := &Model{}
+	model.Pose = pose
+	return model
+}
+
+func (model *Model) Draw() {
+	//
 }

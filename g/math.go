@@ -4,18 +4,18 @@ import "math"
 
 // Fixed point lengths
 const (
-	M  = 100000
-	MM = 100
+	M  Length = 100000
+	MM Length = 100
 
-	TAU      = 2 * math.Pi
-	RadToDeg = 360 / TAU
+	Tau      Radians = 2 * math.Pi
+	RadToDeg         = 360 / Tau
 )
 
 type Radians = float32
 type Length int32
 
-func (length Length) Meters() float32      { return length.Float32() / M }
-func (length Length) Millimeters() float32 { return length.Float32() / MM }
+func (length Length) Meters() float32      { return length.Float32() / M.Float32() }
+func (length Length) Millimeters() float32 { return length.Float32() / MM.Float32() }
 
 func (length Length) Float64() float64 { return float64(length) }
 func (length Length) Float32() float32 { return float32(length) }

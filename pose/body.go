@@ -1,20 +1,23 @@
-package robot
+package pose
 
 import "github.com/egonelbre/hexapod/g"
 
 type Body struct {
-	Leg struct {
-		LF, RF Leg
-		LM, RM Leg
-		LB, RB Leg
-	}
+	Size g.Vec
+	Leg  Legs
+}
+
+type Legs struct {
+	LF, RF Leg
+	LM, RM Leg
+	LB, RB Leg
 }
 
 type Leg struct {
 	Origin g.Vec
-	Coxa   g.Hinge
-	Femur  g.Hinge
-	Tibia  g.Hinge
+	Coxa   Hinge
+	Femur  Hinge
+	Tibia  Hinge
 }
 
 type RotationAxis byte
@@ -34,12 +37,12 @@ type Hinge struct {
 	Axis   RotationAxis
 	Zero   g.Radians
 	Length g.Length
-
-	Range struct {
-		Min g.Radians
-		Max g.Radians
-	}
+	Range  HingeRange
 
 	// runtime
 	Angle g.Radians
+}
+
+type HingeRange struct {
+	Min, Max g.Radians
 }
