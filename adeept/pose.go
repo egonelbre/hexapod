@@ -8,6 +8,12 @@ import (
 const (
 	legRot = g.Tau / 8           //TODO: fix
 	legY   = 28*g.MM - 45*g.MM/2 // relative to body center
+
+	// femurAngleOffset = g.Tau/8
+	// tibiaAngleOffset = g.Tau/8
+
+	femurAngleOffset = 0
+	tibiaAngleOffset = 0
 )
 
 func ZeroPose() *pose.Body {
@@ -18,21 +24,22 @@ func ZeroPose() *pose.Body {
 			Offset: g.Vec{63 * g.MM, 20 * g.MM, 0},
 		},
 		Leg: pose.Legs{
-			RF: ZeroLeg("RF", g.Vec{63 * g.MM, legY, +57 * g.MM}, +legRot, 1),
-			LF: ZeroLeg("LF", g.Vec{63 * g.MM, legY, -57 * g.MM}, -legRot, -1),
-			RM: ZeroLeg("RM", g.Vec{0, legY, +77 * g.MM}, +g.Tau/4, 1),
-			LM: ZeroLeg("LM", g.Vec{0, legY, -77 * g.MM}, -g.Tau/4, -1),
-			RB: ZeroLeg("RB", g.Vec{-63 * g.MM, legY, +57 * g.MM}, +g.Tau/2-legRot, 1),
-			LB: ZeroLeg("LB", g.Vec{-63 * g.MM, legY, -57 * g.MM}, -g.Tau/2+legRot, -1),
+			RF: ZeroLeg("RF", g.Vec{63 * g.MM, legY, +57 * g.MM}, +legRot, 1, 3*g.Tau/6),
+			LF: ZeroLeg("LF", g.Vec{63 * g.MM, legY, -57 * g.MM}, -legRot, -1, 0*g.Tau/6),
+			RM: ZeroLeg("RM", g.Vec{0, legY, +77 * g.MM}, +g.Tau/4, 1, 1*g.Tau/6),
+			LM: ZeroLeg("LM", g.Vec{0, legY, -77 * g.MM}, -g.Tau/4, -1, 4*g.Tau/6),
+			RB: ZeroLeg("RB", g.Vec{-63 * g.MM, legY, +57 * g.MM}, +g.Tau/2-legRot, 1, 5*g.Tau/6),
+			LB: ZeroLeg("LB", g.Vec{-63 * g.MM, legY, -57 * g.MM}, -g.Tau/2+legRot, -1, 2*g.Tau/6),
 		},
 	}
 }
 
-func ZeroLeg(name string, offset g.Vec, zero g.Radians, side g.Radians) pose.Leg {
+func ZeroLeg(name string, offset g.Vec, zero g.Radians, side g.Radians, phase g.Radians) pose.Leg {
 	target := offset
 	target.Y = 0
 	return pose.Leg{
 		Name:   name,
+		Phase:  -phase,
 		Offset: offset,
 		Coxa: pose.Hinge{
 			Axis:   pose.Y,
@@ -43,12 +50,12 @@ func ZeroLeg(name string, offset g.Vec, zero g.Radians, side g.Radians) pose.Leg
 		Femur: pose.Hinge{
 			Axis:   pose.Z,
 			Length: 38 * g.MM,
-			Range:  pose.HingeRange{g.Tau/4 + g.Tau/8, -g.Tau/4 + g.Tau/8},
+			Range:  pose.HingeRange{g.Tau/4 + femurAngleOffset, -g.Tau/4 + femurAngleOffset},
 		},
 		Tibia: pose.Hinge{
 			Axis:   pose.Z,
 			Length: 50 * g.MM,
-			Range:  pose.HingeRange{g.Tau / 4, -g.Tau / 4},
+			Range:  pose.HingeRange{g.Tau/4 + tibiaAngleOffset, -g.Tau/4 + tibiaAngleOffset},
 		},
 		IK: pose.LegIK{
 			Origin: offset,

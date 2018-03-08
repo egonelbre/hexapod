@@ -35,6 +35,14 @@ func (a Vec) Mul(b Vec) Vec {
 	}
 }
 
+func (a Vec) Scale(s float32) Vec {
+	return Vec{
+		X: Length(float32(a.X) * s),
+		Y: Length(float32(a.Y) * s),
+		Z: Length(float32(a.Z) * s),
+	}
+}
+
 func (a Vec) Dot(b Vec) Length      { return a.X*b.X + a.Y*b.Y + a.Z*b.Z }
 func (a Vec) Length() Length        { return a.Dot(a).Sqrt() }
 func (a Vec) Length2() Length       { return a.Dot(a) }

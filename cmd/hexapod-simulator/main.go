@@ -46,21 +46,8 @@ func main() {
 		}
 		raylib.End3dMode()
 
-		{
-			model.DrawLabels(camera)
-
-			raylib.DrawFPS(10, 10)
-
-			raylib.DrawRectangle(10, 30, 320, 133, raylib.Fade(raylib.SkyBlue, 0.5))
-			raylib.DrawRectangleLines(10, 30, 320, 133, raylib.Blue)
-
-			raylib.DrawText("Free camera default controls:", 20, 40, 10, raylib.Black)
-			raylib.DrawText("- Mouse Wheel to Zoom in-out", 40, 60, 10, raylib.DarkGray)
-			raylib.DrawText("- Mouse Wheel Pressed to Pan", 40, 80, 10, raylib.DarkGray)
-			raylib.DrawText("- Alt + Mouse Wheel Pressed to Rotate", 40, 100, 10, raylib.DarkGray)
-			raylib.DrawText("- Alt + Ctrl + Mouse Wheel Pressed for Smooth Zoom", 40, 120, 10, raylib.DarkGray)
-			raylib.DrawText("- Z to zoom to (0, 0, 0)", 40, 140, 10, raylib.DarkGray)
-		}
+		model.DrawUI(camera)
+		raylib.DrawFPS(10, 10)
 
 		raylib.EndDrawing()
 	}

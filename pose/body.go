@@ -28,7 +28,9 @@ type Legs struct {
 }
 
 type Leg struct {
-	Name   string
+	Name  string
+	Phase g.Radians
+
 	Offset g.Vec // relative to body Origin
 	Coxa   Hinge
 	Femur  Hinge
@@ -40,10 +42,11 @@ type Leg struct {
 
 type LegIK struct {
 	// Robot Coordinate Space
-	Origin g.Vec
-	Target g.Vec
-	Solved bool
-	Debug  string
+	Origin  g.Vec
+	Target  g.Vec
+	Solved  bool
+	Debug   string
+	Planted bool
 }
 
 func (leg *Leg) Hinges() []*Hinge {

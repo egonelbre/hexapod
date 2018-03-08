@@ -75,7 +75,7 @@ func NewModel(pose *pose.Body) *Model {
 }
 
 func (model *Model) Update() {
-	sn, cs := math.Sincos(float64(raylib.GetTime()))
+	//sn, cs := g.Sincos(raylib.GetTime())
 	for _, leg := range model.Pose.Legs() {
 		for _, hinge := range leg.Hinges() {
 			hinge.Angle = g.Tau / 4
@@ -87,14 +87,23 @@ func (model *Model) Update() {
 		}
 	}
 
-	bodyOsc := math.Sin(float64(raylib.GetTime()) * 2)
-	model.Pose.Origin.Y = g.Length(bodyOsc*float64(model.Pose.Size.Y/4)) + model.Pose.Size.Y
-	model.Pose.Origin.X = g.Length(5*sn) * g.MM
-	model.Pose.Origin.Z = g.Length(5*cs) * g.MM
+	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+	bodyOsc := math.Sin(float64(raylib.GetTime() * 4 * 2))
+	model.Pose.Origin.Y = g.Length(bodyOsc*float64(model.Pose.Size.Y/8)) + model.Pose.Size.Y
+	// model.Pose.Origin.X = g.Length(20*sn) * g.MM
+	// model.Pose.Origin.Z = g.Length(20*cs) * g.MM
 
 	for _, leg := range model.Pose.Legs() {
+		sn, cs := g.Sincos(raylib.GetTime()*4 + leg.Phase)
+
 		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
-		leg.IK.Target.Y = 0
+		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
+		leg.IK.Target.X += g.Length(20 * sn * g.MM.Float32())
+		leg.IK.Planted = false
+		if leg.IK.Target.Y < 0 {
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+		}
 	}
 
 	legik.Solve(model.Pose)
@@ -201,17 +210,61 @@ func (model *Model) Draw() {
 		effectorWorldGround.Y = 0
 
 		raylib.DrawLine3D(effectorWorldSpace, effectorWorldGround, effectorColor)
-		raylib.DrawCubeV(effectorWorldGround, raylib.Vector3{5 * mm, 1 * mm, 5 * mm}, effectorColor)
+
+		plantSize := 5 * mm
+		if leg.IK.Planted {
+			plantSize = 20 * mm
+		}
+		raylib.DrawCubeV(effectorWorldGround, raylib.Vector3{plantSize, 1 * mm, plantSize}, effectorColor)
 
 		//raylib.DrawCircle3D(leg.IK.Target.Meters(), 5*mm, raylib.Vector3{0, 0, 0}, 0, raylib.DarkGreen)
 		raylib.DrawCubeV(leg.IK.Target.Meters(), raylib.Vector3{8 * mm, 1 * mm, 8 * mm}, raylib.Green)
 	}
 }
 
-func (model *Model) DrawLabels(camera raylib.Camera) {
+func (model *Model) DrawUI(camera raylib.Camera) {
 	for i := range model.Labels {
 		label := &model.Labels[i]
 		screen := raylib.GetWorldToScreen(label.Position, camera)
 		raylib.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, label.Color)
+	}
+
+	min := raylib.Vector2{10, 30}
+	size := raylib.Vector2{200, 200}
+	hudScale := float32(size.X) / 0.6
+
+	center := min
+	center.X += size.X / 2
+	center.Y += size.Y / 2
+
+	raylib.DrawRectangleV(min, size, raylib.Fade(raylib.SkyBlue, 0.5))
+
+	var bodyOrigin raylib.Vector3 = model.Pose.Origin.Scale(hudScale).Meters()
+	var bodySize raylib.Vector3 = model.Pose.Size.Scale(hudScale).Meters()
+	bodyMin := raymath.Vector2Add(center, raylib.Vector2{bodyOrigin.Z, -bodyOrigin.X})
+	bodyMin.X -= bodySize.Z / 2
+	bodyMin.Y -= bodySize.X / 2
+
+	raylib.DrawRectangleV(bodyMin, raylib.Vector2{bodySize.Z, bodySize.X}, raylib.DarkGray)
+
+	for _, leg := range model.Pose.Legs() {
+		effectorColor := raylib.Blue
+		if !leg.IK.Solved {
+			effectorColor = raylib.Red
+		}
+		if !leg.IK.Planted {
+			effectorColor = raylib.Fade(effectorColor, 0.5)
+		}
+
+		footSize := raylib.Vector2{10, 10}
+
+		var p raylib.Vector3
+		p = leg.IK.Target.Scale(hudScale).Meters()
+
+		t := raymath.Vector2Add(center, raylib.Vector2{p.Z, -p.X})
+		t.X -= footSize.X / 2
+		t.Y -= footSize.Y / 2
+
+		raylib.DrawRectangleV(t, footSize, effectorColor)
 	}
 }
