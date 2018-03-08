@@ -87,9 +87,10 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) {
 	if leg.Tibia.Clamp() {
 		if pose.VectorPlanted(worldTarget) {
 			footLength2 := femurLength2 + tibiaLength2 - g.Length((2*leg.Femur.Length*leg.Tibia.Length).Float32()*g.Cos(leg.Tibia.Angle))
+			footLength := footLength2.Sqrt()
 
-			footInternalAngle := g.Asin(leg.Femur.Length.Float32() * g.Sin(leg.Tibia.Angle) / leg.Tibia.Length.Float32())
-			footAngle := g.Asin(coxaOrigin.Y.Float32() / footLength2.Sqrt().Float32())
+			footInternalAngle := g.Asin(leg.Tibia.Length.Float32() * g.Sin(leg.Tibia.Angle) / footLength.Float32())
+			footAngle := g.Asin(coxaOrigin.Y.Float32() / footLength.Float32())
 
 			leg.Femur.Angle = footAngle - footInternalAngle
 		}
