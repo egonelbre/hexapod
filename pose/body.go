@@ -11,9 +11,8 @@ type Body struct {
 
 func (body *Body) Legs() []*Leg {
 	return []*Leg{
-		&body.Leg.LF, &body.Leg.RF,
-		&body.Leg.LM, &body.Leg.RM,
-		&body.Leg.LB, &body.Leg.RB,
+		&body.Leg.RF, &body.Leg.RM, &body.Leg.RB,
+		&body.Leg.LB, &body.Leg.LM, &body.Leg.LF,
 	}
 }
 

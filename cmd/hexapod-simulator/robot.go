@@ -75,7 +75,10 @@ func NewModel(pose *pose.Body) *Model {
 }
 
 func (model *Model) Update() {
-	//sn, cs := g.Sincos(raylib.GetTime())
+	// time := 2 * float32(raylib.GetMouseX()) / float32(raylib.GetScreenWidth())
+	time := raylib.GetTime()
+
+	//sn, cs := g.Sincos(time)
 	for _, leg := range model.Pose.Legs() {
 		for _, hinge := range leg.Hinges() {
 			hinge.Angle = g.Tau / 4
@@ -88,13 +91,17 @@ func (model *Model) Update() {
 	}
 
 	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
-	bodyOsc := math.Sin(float64(raylib.GetTime() * 4 * 2))
-	model.Pose.Origin.Y = g.Length(bodyOsc*float64(model.Pose.Size.Y/8)) + model.Pose.Size.Y
-	// model.Pose.Origin.X = g.Length(20*sn) * g.MM
-	// model.Pose.Origin.Z = g.Length(20*cs) * g.MM
+
+	bodyOsc := math.Sin(float64(time * 4 * 2))
+	model.Pose.Origin.Y = g.Length(bodyOsc*float64(2*g.MM)) + model.Pose.Size.Y
+
+	bodyOscX := math.Sin(float64(time * 2))
+	bodyOscZ := math.Cos(float64(time*4 + g.Tau/8))
+	model.Pose.Origin.X = g.Length(5*bodyOscX) * g.MM
+	model.Pose.Origin.Z = g.Length(5*bodyOscZ) * g.MM
 
 	for _, leg := range model.Pose.Legs() {
-		sn, cs := g.Sincos(raylib.GetTime()*4 + leg.Phase)
+		sn, cs := g.Sincos(time*4 + leg.Phase)
 
 		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
@@ -247,6 +254,8 @@ func (model *Model) DrawUI(camera raylib.Camera) {
 
 	raylib.DrawRectangleV(bodyMin, raylib.Vector2{bodySize.Z, bodySize.X}, raylib.DarkGray)
 
+	plantedPoints := []raylib.Vector2{}
+
 	for _, leg := range model.Pose.Legs() {
 		effectorColor := raylib.Blue
 		if !leg.IK.Solved {
@@ -262,9 +271,21 @@ func (model *Model) DrawUI(camera raylib.Camera) {
 		p = leg.IK.Target.Scale(hudScale).Meters()
 
 		t := raymath.Vector2Add(center, raylib.Vector2{p.Z, -p.X})
+		if leg.IK.Planted {
+			plantedPoints = append(plantedPoints, t)
+		}
+
 		t.X -= footSize.X / 2
 		t.Y -= footSize.Y / 2
 
 		raylib.DrawRectangleV(t, footSize, effectorColor)
+	}
+
+	if len(plantedPoints) >= 2 {
+		p := plantedPoints[len(plantedPoints)-1]
+		for _, n := range plantedPoints {
+			raylib.DrawLineV(p, n, raylib.Blue)
+			p = n
+		}
 	}
 }
