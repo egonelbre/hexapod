@@ -18,20 +18,21 @@ func ZeroPose() *pose.Body {
 			Offset: g.Vec{63 * g.MM, 20 * g.MM, 0},
 		},
 		Leg: pose.Legs{
-			RF: ZeroLeg(g.Vec{63 * g.MM, legY, +57 * g.MM}, legRot, 1),
-			LF: ZeroLeg(g.Vec{63 * g.MM, legY, -57 * g.MM}, -legRot, -1),
-			RM: ZeroLeg(g.Vec{0, legY, +77 * g.MM}, +g.Tau/4, 1),
-			LM: ZeroLeg(g.Vec{0, legY, -77 * g.MM}, -g.Tau/4, -1),
-			RB: ZeroLeg(g.Vec{-63 * g.MM, legY, +57 * g.MM}, g.Tau/2-legRot, 1),
-			LB: ZeroLeg(g.Vec{-63 * g.MM, legY, -57 * g.MM}, -g.Tau/2+legRot, -1),
+			RF: ZeroLeg("RF", g.Vec{63 * g.MM, legY, +57 * g.MM}, +legRot, 1),
+			LF: ZeroLeg("LF", g.Vec{63 * g.MM, legY, -57 * g.MM}, -legRot, -1),
+			RM: ZeroLeg("RM", g.Vec{0, legY, +77 * g.MM}, +g.Tau/4, 1),
+			LM: ZeroLeg("LM", g.Vec{0, legY, -77 * g.MM}, -g.Tau/4, -1),
+			RB: ZeroLeg("RB", g.Vec{-63 * g.MM, legY, +57 * g.MM}, +g.Tau/2-legRot, 1),
+			LB: ZeroLeg("LB", g.Vec{-63 * g.MM, legY, -57 * g.MM}, -g.Tau/2+legRot, -1),
 		},
 	}
 }
 
-func ZeroLeg(offset g.Vec, zero g.Radians, side g.Radians) pose.Leg {
+func ZeroLeg(name string, offset g.Vec, zero g.Radians, side g.Radians) pose.Leg {
 	target := offset
 	target.Y = 0
 	return pose.Leg{
+		Name:   name,
 		Offset: offset,
 		Coxa: pose.Hinge{
 			Axis:   pose.Y,

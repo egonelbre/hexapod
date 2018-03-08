@@ -28,6 +28,7 @@ type Legs struct {
 }
 
 type Leg struct {
+	Name   string
 	Offset g.Vec // relative to body Origin
 	Coxa   Hinge
 	Femur  Hinge
@@ -38,8 +39,10 @@ type Leg struct {
 }
 
 type LegIK struct {
+	// Robot Coordinate Space
 	Origin g.Vec
 	Target g.Vec
+	Debug  string
 }
 
 func (leg *Leg) Hinges() []*Hinge {
@@ -71,4 +74,32 @@ type Hinge struct {
 
 type HingeRange struct {
 	Min, Max g.Radians
+}
+
+func (hinge *Hinge) lowhigh() (low, high g.Radians) {
+	if hinge.Range.Min < hinge.Range.Max {
+		return hinge.Range.Min, hinge.Range.Max
+	}
+	return hinge.Range.Max, hinge.Range.Min
+}
+
+func (hinge *Hinge) InBounds() bool {
+	low, high := hinge.lowhigh()
+	return low <= hinge.Angle && hinge.Angle <= high
+}
+
+func (hinge *Hinge) Clamp() bool {
+	low, high := hinge.lowhigh()
+	if hinge.Angle < low {
+		hinge.Angle = low
+		return true
+	} else if hinge.Angle > high {
+		hinge.Angle = high
+		return true
+	}
+	return false
+}
+
+func VectorPlanted(v g.Vec) bool {
+	return g.Abs(v.Y) < 1*g.MM
 }

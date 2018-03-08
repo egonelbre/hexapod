@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/egonelbre/hexapod/g"
+	"github.com/egonelbre/hexapod/ik/legik"
 	"github.com/egonelbre/hexapod/pose"
 
 	"github.com/gen2brain/raylib-go/raylib"
@@ -14,6 +16,7 @@ type Model struct {
 	Pose *pose.Body
 
 	Shader raylib.Shader
+	Labels []Label
 
 	Head raylib.Model
 	Body raylib.Model
@@ -24,6 +27,12 @@ type Model struct {
 	Bone     raylib.Model
 	Hinge    raylib.Model
 	Effector raylib.Model
+}
+
+type Label struct {
+	Position raylib.Vector3
+	Text     string
+	Color    raylib.Color
 }
 
 func NewModel(pose *pose.Body) *Model {
@@ -42,9 +51,9 @@ func NewModel(pose *pose.Body) *Model {
 	model.Body = raylib.LoadModelFromMesh(raylib.GenMeshCube(size.X, size.Y, size.Z))
 
 	model.LegPlateSize = g.Vec{
-		X: pose.Leg.RF.Offset.X - pose.Leg.RB.Offset.X,
+		X: pose.Leg.RF.Offset.X - pose.Leg.RB.Offset.X - 5*g.MM,
 		Y: 3 * g.MM,
-		Z: pose.Leg.RM.Offset.Z - pose.Size.Z/2,
+		Z: pose.Leg.RM.Offset.Z - pose.Size.Z/2 - 2*g.MM,
 	}
 	model.LegPlate = raylib.LoadModelFromMesh(raylib.GenMeshCube(model.LegPlateSize.XYZ()))
 
@@ -66,15 +75,40 @@ func NewModel(pose *pose.Body) *Model {
 }
 
 func (model *Model) Update() {
-	angle := math.Sin(float64(raylib.GetTime()))
+	sn, cs := math.Sincos(float64(raylib.GetTime()))
 	for _, leg := range model.Pose.Legs() {
 		for _, hinge := range leg.Hinges() {
-			hinge.Angle = g.Radians(angle) * hinge.Range.Min
+			hinge.Angle = g.Tau / 4
+			if hinge.Axis == pose.Y {
+				hinge.Angle = g.Tau / 4
+			}
+			hinge.Angle = 0
+			// hinge.Angle = g.Radians(sn) * hinge.Range.Min
 		}
 	}
+
+	bodyOsc := math.Sin(float64(raylib.GetTime()) * 0.3)
+	model.Pose.Origin.Y = g.Length(bodyOsc * float64(model.Pose.Size.Y*2)) // + model.Pose.Size.Y
+
+	for _, leg := range model.Pose.Legs() {
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(50 * g.MM))
+		leg.IK.Target.Y = 0
+
+		leg.IK.Target.X += g.Length(20*sn) * g.MM
+		leg.IK.Target.Z += g.Length(20*cs) * g.MM
+	}
+
+	legik.Solve(model.Pose)
+}
+
+func (model *Model) AddLabel(text string, pos raylib.Vector3, col raylib.Color) {
+	model.Labels = append(model.Labels, Label{pos, text, col})
 }
 
 func (model *Model) Draw() {
+	model.Labels = model.Labels[:0]
+	model.AddLabel(".", model.Pose.Origin.Meters(), raylib.Black)
+
 	zero := raylib.Vector3{}
 	center := raylib.Vector3{}
 
@@ -96,22 +130,43 @@ func (model *Model) Draw() {
 	for _, leg := range model.Pose.Legs() {
 		transform := raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(leg.Offset.XYZ()))
 
+		var labelPosition raylib.Vector3
+		raymath.Vector3Transform(&labelPosition, transform)
+		labelPosition.Y += 30 * mm
+		model.AddLabel(leg.Name+" "+leg.IK.Debug, labelPosition, raylib.Black)
+
 		for _, hinge := range leg.Hinges() {
-			var hingeRotation raylib.Matrix
+			var newRotation func(v float32) raylib.Matrix
 			var hingeScale raylib.Matrix
 			switch hinge.Axis {
 			case pose.X:
-				hingeRotation = raymath.MatrixRotateX(hinge.Zero + hinge.Angle)
+				newRotation = raymath.MatrixRotateX
 				hingeScale = raymath.MatrixScale(20*mm, 5*mm, 5*mm)
 			case pose.Y:
-				hingeRotation = raymath.MatrixRotateY(hinge.Zero + hinge.Angle)
+				newRotation = raymath.MatrixRotateY
 				hingeScale = raymath.MatrixScale(5*mm, 20*mm, 5*mm)
 			case pose.Z:
-				hingeRotation = raymath.MatrixRotateZ(hinge.Zero + hinge.Angle)
+				newRotation = raymath.MatrixRotateZ
 				hingeScale = raymath.MatrixScale(5*mm, 5*mm, 20*mm)
 			}
 
-			transform = raymath.MatrixMultiply(transform, hingeRotation)
+			var hingeCenter raylib.Vector3
+			raymath.Vector3Transform(&hingeCenter, transform)
+			model.AddLabel(fmt.Sprintf("%.0f", hinge.Angle*g.RadToDeg), hingeCenter, raylib.Black)
+
+			hingePointMin := raylib.Vector3{20 * mm, 0, 0}
+			hingePointZero := raylib.Vector3{20 * mm, 0, 0}
+			hingePointMax := raylib.Vector3{20 * mm, 0, 0}
+
+			raymath.Vector3Transform(&hingePointMin, raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Range.Min)))
+			raymath.Vector3Transform(&hingePointZero, raymath.MatrixMultiply(transform, newRotation(hinge.Zero)))
+			raymath.Vector3Transform(&hingePointMax, raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Range.Max)))
+
+			raylib.DrawLine3D(hingeCenter, hingePointMin, raylib.Red)
+			raylib.DrawLine3D(hingeCenter, hingePointZero, raylib.Green)
+			raylib.DrawLine3D(hingeCenter, hingePointMax, raylib.Blue)
+
+			transform = raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Angle))
 			model.Hinge.Transform = raymath.MatrixMultiply(transform, hingeScale)
 
 			hingeLength := hinge.Length.Meters()
@@ -123,7 +178,12 @@ func (model *Model) Draw() {
 				raymath.MatrixScale(hingeLength, 4*mm, 4*mm))
 
 			raylib.DrawModel(model.Hinge, zero, 1, raylib.Blue)
-			raylib.DrawModel(model.Bone, zero, 1, raylib.SkyBlue)
+
+			if hinge.InBounds() {
+				raylib.DrawModel(model.Bone, zero, 1, raylib.SkyBlue)
+			} else {
+				raylib.DrawModel(model.Bone, zero, 1, raylib.NewColor(255, 102, 191, 255))
+			}
 
 			transform = raymath.MatrixMultiply(transform, raymath.MatrixTranslate(hingeLength, 0, 0))
 		}
@@ -142,5 +202,13 @@ func (model *Model) Draw() {
 
 		//raylib.DrawCircle3D(leg.IK.Target.Meters(), 5*mm, raylib.Vector3{0, 0, 0}, 0, raylib.DarkGreen)
 		raylib.DrawCubeV(leg.IK.Target.Meters(), raylib.Vector3{8 * mm, 1 * mm, 8 * mm}, raylib.Green)
+	}
+}
+
+func (model *Model) DrawLabels(camera raylib.Camera) {
+	for i := range model.Labels {
+		label := &model.Labels[i]
+		screen := raylib.GetWorldToScreen(label.Position, camera)
+		raylib.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, label.Color)
 	}
 }

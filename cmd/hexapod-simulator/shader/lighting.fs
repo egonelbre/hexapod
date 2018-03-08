@@ -17,13 +17,13 @@ out vec4 finalColor;
 
 // NOTE: Add here your custom variables
 
-const vec3 directionalLight = vec3(1, 1, 1);
+const vec3 directionalLight = vec3(3, 5, 4);
 
 void main()
 {
    // Texel color fetching from texture sampler
     vec4 texelColor = texture(texture0, fragTexCoord)*colDiffuse*fragColor;
-    float cosTheta = clamp(dot(fragNormal, directionalLight), 0.5, 1);
+    float cosTheta = clamp(dot(fragNormal, normalize(directionalLight)), 0.5, 1);
 
     // Calculate final fragment color
     vec3 color = texelColor.rgb * cosTheta;

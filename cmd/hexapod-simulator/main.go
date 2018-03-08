@@ -15,7 +15,7 @@ func main() {
 
 	raylib.SetConfigFlags(raylib.FlagMsaa4xHint)
 
-	raylib.InitWindow(screenWidth, screenHeight, "ik3d")
+	raylib.InitWindow(screenWidth, screenHeight, "Hexapod Simulator")
 	raylib.SetWindowPosition(-1920/2-screenWidth/2, 1200/2-screenHeight/2)
 
 	camera := raylib.Camera{}
@@ -47,6 +47,8 @@ func main() {
 		raylib.End3dMode()
 
 		{
+			model.DrawLabels(camera)
+
 			raylib.DrawFPS(10, 10)
 
 			raylib.DrawRectangle(10, 30, 320, 133, raylib.Fade(raylib.SkyBlue, 0.5))
