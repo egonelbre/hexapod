@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/egonelbre/hexapod/g"
 	"github.com/egonelbre/hexapod/ik/legik"
@@ -76,44 +75,142 @@ func NewModel(pose *pose.Body) *Model {
 
 func (model *Model) Update() {
 	// time := 2 * float32(raylib.GetMouseX()) / float32(raylib.GetScreenWidth())
-	time := raylib.GetTime()
+	time := raylib.GetTime() * 8
 
-	//sn, cs := g.Sincos(time)
-	for _, leg := range model.Pose.Legs() {
-		for _, hinge := range leg.Hinges() {
-			hinge.Angle = g.Tau / 4
-			if hinge.Axis == pose.Y {
-				hinge.Angle = g.Tau / 4
-			}
-			hinge.Angle = 0
-			// hinge.Angle = g.Radians(sn) * hinge.Range.Min
-		}
-	}
+	//model.walk(time)
+	model.tippyTaps1(time)
 
+	legik.Solve(model.Pose)
+}
+
+func (model *Model) walk(time float32) {
 	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
 
-	bodyOsc := math.Sin(float64(time * 4 * 2))
-	model.Pose.Origin.Y = g.Length(bodyOsc*float64(2*g.MM)) + model.Pose.Size.Y
+	bodyOscY := g.Sin(time)
+	if bodyOscY < 0 {
+		bodyOscY = -bodyOscY
+	}
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
 
-	bodyOscX := math.Sin(float64(time * 2))
-	bodyOscZ := math.Cos(float64(time*4 + g.Tau/8))
-	model.Pose.Origin.X = g.Length(5*bodyOscX) * g.MM
-	model.Pose.Origin.Z = g.Length(5*bodyOscZ) * g.MM
+	bodyOscX := g.Sin(time * 0.5)
+	bodyOscZ := g.Cos(time + g.Tau/16)
+	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	model.Pose.Origin.Z = g.Length(7*bodyOscZ) * g.MM
 
 	for _, leg := range model.Pose.Legs() {
-		sn, cs := g.Sincos(time*4 + leg.Phase)
+		sn, cs := g.Sincos(time + leg.Phase)
 
 		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+
 		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
 		leg.IK.Target.X += g.Length(20 * sn * g.MM.Float32())
+
 		leg.IK.Planted = false
 		if leg.IK.Target.Y < 0 {
 			leg.IK.Target.Y = 0
 			leg.IK.Planted = true
 		}
 	}
+}
 
-	legik.Solve(model.Pose)
+func (model *Model) tippyTaps1(time float32) {
+	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+
+	bodyOscY := g.Sin(time * 2)
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+
+	bodyOscX := g.Sin(time * 0.5)
+	bodyOscZ := g.Cos(time + g.Tau/16)
+	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	model.Pose.Origin.Z = g.Length(5*bodyOscZ) * g.MM
+
+	for _, leg := range model.Pose.Legs() {
+		_, cs := g.Sincos(time + leg.Phase)
+
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
+
+		leg.IK.Planted = false
+		if leg.IK.Target.Y < 0 {
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+		}
+	}
+}
+
+func (model *Model) tippyTaps2(time float32) {
+	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+
+	bodyOscY := g.Sin(time * 2)
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+
+	bodyOscX := g.Sin(time * 0.5)
+	bodyOscZ := g.Cos(time + g.Tau/16)
+	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	model.Pose.Origin.Z = g.Length(10*bodyOscZ) * g.MM
+
+	for _, leg := range model.Pose.Legs() {
+		if leg.Name == "RB" || leg.Name == "LB" {
+			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+			continue
+		}
+
+		_, cs := g.Sincos(time + leg.Phase)
+
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
+
+		leg.IK.Planted = false
+		if leg.IK.Target.Y < 0 {
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+		}
+	}
+}
+
+func (model *Model) tippyTaps3(time float32) {
+	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+
+	bodyOscY := g.Sin(time)
+	if bodyOscY < 0 {
+		bodyOscY = -bodyOscY
+	}
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(10*g.MM)) + model.Pose.Size.Y
+
+	bodyOscX := g.Sin(time * 0.5)
+	bodyOscZ := g.Cos(time + g.Tau/16)
+	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	model.Pose.Origin.Z = g.Length(10*bodyOscZ) * g.MM
+
+	for _, leg := range model.Pose.Legs() {
+		if leg.Name == "RB" || leg.Name == "LB" {
+			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+			continue
+		}
+
+		phase := leg.Phase
+		if leg.Name[0] == 'R' {
+			phase = g.Tau / 2
+		} else {
+			phase = 0
+		}
+
+		sn, cs := g.Sincos(time + phase)
+
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
+		_ = sn
+		//leg.IK.Target.X += g.Length(20 * sn * g.MM.Float32())
+		leg.IK.Planted = false
+		if leg.IK.Target.Y < 0 {
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+		}
+	}
 }
 
 func (model *Model) AddLabel(text string, pos raylib.Vector3, col raylib.Color) {
