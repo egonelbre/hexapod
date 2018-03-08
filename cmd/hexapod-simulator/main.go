@@ -2,7 +2,6 @@ package main
 
 import (
 	_ "github.com/egonelbre/hexapod/cmd/hexapod-simulator/internal"
-	"github.com/egonelbre/hexapod/pose"
 
 	"github.com/egonelbre/hexapod/adeept"
 	"github.com/egonelbre/hexapod/g"
@@ -42,6 +41,7 @@ func main() {
 			raylib.DrawGrid(40, 0.01*g.M.Meters())
 			raylib.DrawGizmo(raylib.Vector3{})
 
+			model.Update()
 			model.Draw()
 		}
 		raylib.End3dMode()
@@ -64,18 +64,4 @@ func main() {
 	}
 
 	raylib.CloseWindow()
-}
-
-type Model struct {
-	Pose *pose.Body
-}
-
-func NewModel(pose *pose.Body) *Model {
-	model := &Model{}
-	model.Pose = pose
-	return model
-}
-
-func (model *Model) Draw() {
-	//
 }

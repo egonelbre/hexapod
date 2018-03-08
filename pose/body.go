@@ -3,8 +3,22 @@ package pose
 import "github.com/egonelbre/hexapod/g"
 
 type Body struct {
-	Size g.Vec
-	Leg  Legs
+	Size   g.Vec
+	Origin g.Vec
+	Head   Head
+	Leg    Legs
+}
+
+func (body *Body) Legs() []*Leg {
+	return []*Leg{
+		&body.Leg.LF, &body.Leg.RF,
+		&body.Leg.LM, &body.Leg.RM,
+		&body.Leg.LB, &body.Leg.RB,
+	}
+}
+
+type Head struct {
+	Offset g.Vec
 }
 
 type Legs struct {
@@ -14,27 +28,39 @@ type Legs struct {
 }
 
 type Leg struct {
-	Origin g.Vec
+	Offset g.Vec // relative to body Origin
 	Coxa   Hinge
 	Femur  Hinge
 	Tibia  Hinge
+
+	// Mainly for debug purposes
+	IK LegIK
 }
 
-type RotationAxis byte
+type LegIK struct {
+	Origin g.Vec
+	Target g.Vec
+}
+
+func (leg *Leg) Hinges() []*Hinge {
+	return []*Hinge{
+		&leg.Coxa,
+		&leg.Femur,
+		&leg.Tibia,
+	}
+}
+
+type Axis byte
 
 const (
-	RotationX = RotationAxis(iota)
-	RotationY
-	RotationZ
+	X = Axis(iota)
+	Y
+	Z
 )
-
-type HingeX = Hinge
-type HingeY = Hinge
-type HingeZ = Hinge
 
 type Hinge struct {
 	// const
-	Axis   RotationAxis
+	Axis   Axis
 	Zero   g.Radians
 	Length g.Length
 	Range  HingeRange

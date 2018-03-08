@@ -67,3 +67,6 @@ func (a Vec) Meters() struct{ X, Y, Z float32 } {
 func (a Vec) Millimeters() struct{ X, Y, Z float32 } {
 	return struct{ X, Y, Z float32 }{a.X.Millimeters(), a.Y.Millimeters(), a.Z.Millimeters()}
 }
+func (a Vec) XYZ() (x, y, z float32) {
+	return a.X.Meters(), a.Y.Meters(), a.Z.Meters()
+}
