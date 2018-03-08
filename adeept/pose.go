@@ -43,7 +43,7 @@ func ZeroLeg(name string, offset g.Vec, zero g.Radians, side g.Radians) pose.Leg
 		Femur: pose.Hinge{
 			Axis:   pose.Z,
 			Length: 38 * g.MM,
-			Range:  pose.HingeRange{g.Tau / 4, -g.Tau / 4},
+			Range:  pose.HingeRange{g.Tau/4 + g.Tau/8, -g.Tau/4 + g.Tau/8},
 		},
 		Tibia: pose.Hinge{
 			Axis:   pose.Z,

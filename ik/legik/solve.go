@@ -12,11 +12,11 @@ import (
 
 func Solve(body *pose.Body) {
 	for _, leg := range body.Legs() {
-		SolveLeg(body, leg, leg.IK.Target)
+		leg.IK.Solved = SolveLeg(body, leg, leg.IK.Target)
 	}
 }
 
-func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) {
+func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 	// TODO: handle body rotation
 
 	// Calculate Coxa.Angle by looking in Body-Space top-down
@@ -27,6 +27,10 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) {
 
 	if leg.Coxa.Angle > g.Tau/2 {
 		leg.Coxa.Angle = leg.Coxa.Angle - g.Tau
+	}
+
+	if leg.Coxa.Clamp() {
+		coxaAngleRelativeToForward = coxaAngleRelativeToForward + leg.Coxa.Zero - g.Tau/4
 	}
 
 	//  +---------------------------------------------------------+
@@ -75,7 +79,7 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) {
 		}
 
 		leg.Femur.Clamp()
-		return
+		return false
 	}
 
 	femurInternalAngle := g.Acos((femurLength2 + targetDistance2 - tibiaLength2).Float32() / (2 * leg.Femur.Length * targetDistance).Float32())
@@ -94,6 +98,11 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) {
 
 			leg.Femur.Angle = footAngle - footInternalAngle
 		}
+		leg.Femur.Clamp()
+		return false
 	}
-	leg.Femur.Clamp()
+	if leg.Femur.Clamp() {
+		return false
+	}
+	return true
 }

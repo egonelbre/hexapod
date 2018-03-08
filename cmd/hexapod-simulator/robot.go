@@ -87,15 +87,14 @@ func (model *Model) Update() {
 		}
 	}
 
-	bodyOsc := math.Sin(float64(raylib.GetTime()) * 0.3)
-	model.Pose.Origin.Y = g.Length(bodyOsc * float64(model.Pose.Size.Y*2)) // + model.Pose.Size.Y
+	bodyOsc := math.Sin(float64(raylib.GetTime()) * 2)
+	model.Pose.Origin.Y = g.Length(bodyOsc*float64(model.Pose.Size.Y/4)) + model.Pose.Size.Y
+	model.Pose.Origin.X = g.Length(5*sn) * g.MM
+	model.Pose.Origin.Z = g.Length(5*cs) * g.MM
 
 	for _, leg := range model.Pose.Legs() {
-		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(50 * g.MM))
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 		leg.IK.Target.Y = 0
-
-		leg.IK.Target.X += g.Length(20*sn) * g.MM
-		leg.IK.Target.Z += g.Length(20*cs) * g.MM
 	}
 
 	legik.Solve(model.Pose)
@@ -188,17 +187,21 @@ func (model *Model) Draw() {
 			transform = raymath.MatrixMultiply(transform, raymath.MatrixTranslate(hingeLength, 0, 0))
 		}
 
+		effectorColor := raylib.Blue
+		if !leg.IK.Solved {
+			effectorColor = raylib.Red
+		}
 		model.Effector.Transform = raymath.MatrixMultiply(transform,
 			raymath.MatrixScale(5*mm, 5*mm, 5*mm))
-		raylib.DrawModel(model.Effector, zero, 1, raylib.Red)
+		raylib.DrawModel(model.Effector, zero, 1, effectorColor)
 
 		var effectorWorldSpace raylib.Vector3
 		raymath.Vector3Transform(&effectorWorldSpace, transform)
 		effectorWorldGround := effectorWorldSpace
 		effectorWorldGround.Y = 0
 
-		raylib.DrawLine3D(effectorWorldSpace, effectorWorldGround, raylib.Red)
-		raylib.DrawCubeV(effectorWorldGround, raylib.Vector3{5 * mm, 1 * mm, 5 * mm}, raylib.Red)
+		raylib.DrawLine3D(effectorWorldSpace, effectorWorldGround, effectorColor)
+		raylib.DrawCubeV(effectorWorldGround, raylib.Vector3{5 * mm, 1 * mm, 5 * mm}, effectorColor)
 
 		//raylib.DrawCircle3D(leg.IK.Target.Meters(), 5*mm, raylib.Vector3{0, 0, 0}, 0, raylib.DarkGreen)
 		raylib.DrawCubeV(leg.IK.Target.Meters(), raylib.Vector3{8 * mm, 1 * mm, 8 * mm}, raylib.Green)

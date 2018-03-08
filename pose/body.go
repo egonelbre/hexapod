@@ -42,6 +42,7 @@ type LegIK struct {
 	// Robot Coordinate Space
 	Origin g.Vec
 	Target g.Vec
+	Solved bool
 	Debug  string
 }
 
