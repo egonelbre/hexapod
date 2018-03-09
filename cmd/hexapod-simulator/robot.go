@@ -77,9 +77,10 @@ func (model *Model) Update() {
 	// time := 2 * float32(raylib.GetMouseX()) / float32(raylib.GetScreenWidth())
 	time := raylib.GetTime() * 8
 
-	model.walk(time)
+	//model.walk(time)
 	//model.tippyTaps1(time)
 	//model.tapping(time)
+	model.impatient(time)
 
 	legik.Solve(model.Pose)
 }
@@ -261,6 +262,44 @@ func (model *Model) tapping(time float32) {
 		}
 	}
 }
+
+func (model *Model) impatient(time float32) {
+	time *= 0.2
+	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+
+	bodyOscY := g.Sin(time*0.5 + g.Tau/8)
+	if bodyOscY < 0 {
+		bodyOscY = -bodyOscY
+	}
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+
+	//bodyOscX := g.Sin(time)
+	//model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	//bodyOscZ := g.Cos(time)
+	//model.Pose.Origin.Z = g.Length(3*bodyOscZ) * g.MM
+
+	for _, leg := range model.Pose.Legs() {
+		if leg.Name != "RF" {
+			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+			continue
+		}
+
+		_, cs := g.Sincos(time*6 + g.Tau/2)
+
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
+
+		//leg.IK.Target.X += g.Length(20 * sn * g.MM.Float32())
+		leg.IK.Planted = false
+		if leg.IK.Target.Y < 0 {
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+		}
+	}
+}
+
 func (model *Model) AddLabel(text string, pos raylib.Vector3, col raylib.Color) {
 	model.Labels = append(model.Labels, Label{pos, text, col})
 }
