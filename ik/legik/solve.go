@@ -61,11 +61,11 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 	targetDistance2 := target.Length2()
 	targetDistance := targetDistance2.Sqrt()
 
-	femurToTargetAngle := g.Atan2(-target.Y, target.Z)
+	footToTargetAngle := g.Atan2(-target.Y, target.Z)
 
 	if leg.Femur.Length+leg.Tibia.Length < targetDistance {
 		// too far away, straighten leg and point at
-		leg.Femur.Angle = femurToTargetAngle
+		leg.Femur.Angle = footToTargetAngle
 		leg.Tibia.Angle = 0
 
 		if pose.VectorPlanted(worldTarget) {
@@ -83,10 +83,15 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 	}
 
 	femurInternalAngle := g.Acos((femurLength2 + targetDistance2 - tibiaLength2).Float32() / (2 * leg.Femur.Length * targetDistance).Float32())
-	leg.Femur.Angle = femurToTargetAngle - femurInternalAngle
-
 	tibiaInternalAngle := g.Acos((femurLength2 + tibiaLength2 - targetDistance2).Float32() / (2 * leg.Femur.Length * leg.Tibia.Length).Float32())
+
+	leg.Femur.Angle = footToTargetAngle - femurInternalAngle
 	leg.Tibia.Angle = g.Tau/2 - tibiaInternalAngle
+
+	if false /* leg flipped */ {
+		leg.Femur.Angle = footToTargetAngle + femurInternalAngle
+		leg.Tibia.Angle = -(g.Tau/2 - tibiaInternalAngle)
+	}
 
 	if leg.Tibia.Clamp() {
 		if pose.VectorPlanted(worldTarget) {

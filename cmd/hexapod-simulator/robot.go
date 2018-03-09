@@ -77,10 +77,12 @@ func (model *Model) Update() {
 	// time := 2 * float32(raylib.GetMouseX()) / float32(raylib.GetScreenWidth())
 	time := raylib.GetTime() * 8
 
-	//model.walk(time)
+	model.walk(time)
 	//model.tippyTaps1(time)
+	//model.tippyTaps2(time)
 	//model.tapping(time)
-	model.impatient(time)
+	//model.impatient(time)
+	//model.yay(time)
 
 	legik.Solve(model.Pose)
 }
@@ -300,6 +302,43 @@ func (model *Model) impatient(time float32) {
 	}
 }
 
+func (model *Model) yay(time float32) {
+	time *= 0.2
+	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+
+	bodyOscY := g.Sin(time + g.Tau/8)
+	if bodyOscY < 0 {
+		bodyOscY = -bodyOscY
+	}
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+
+	//bodyOscX := g.Sin(time)
+	//model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	//bodyOscZ := g.Cos(time)
+	//model.Pose.Origin.Z = g.Length(3*bodyOscZ) * g.MM
+
+	for _, leg := range model.Pose.Legs() {
+		if leg.Name != "RF" && leg.Name != "LF" {
+			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+			continue
+		}
+
+		legOscY := g.Sin(time - g.Tau/4)
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(60 * g.MM))
+		//leg.IK.Target.Y = 115*g.MM + g.Length(legOscY*float32(5*g.MM))
+		leg.IK.Target.Y = 60*g.MM + g.Length(legOscY*float32(60*g.MM))
+
+		//leg.IK.Target.X += g.Length(20 * sn * g.MM.Float32())
+		leg.IK.Planted = false
+		if leg.IK.Target.Y < 0 {
+			leg.IK.Target.Y = 0
+			leg.IK.Planted = true
+		}
+	}
+}
+
 func (model *Model) AddLabel(text string, pos raylib.Vector3, col raylib.Color) {
 	model.Labels = append(model.Labels, Label{pos, text, col})
 }
@@ -340,22 +379,22 @@ func (model *Model) Draw() {
 			switch hinge.Axis {
 			case pose.X:
 				newRotation = raymath.MatrixRotateX
-				hingeScale = raymath.MatrixScale(20*mm, 5*mm, 5*mm)
+				hingeScale = raymath.MatrixScale(25*mm, 5*mm, 5*mm)
 			case pose.Y:
 				newRotation = raymath.MatrixRotateY
-				hingeScale = raymath.MatrixScale(5*mm, 20*mm, 5*mm)
+				hingeScale = raymath.MatrixScale(5*mm, 25*mm, 5*mm)
 			case pose.Z:
 				newRotation = raymath.MatrixRotateZ
-				hingeScale = raymath.MatrixScale(5*mm, 5*mm, 20*mm)
+				hingeScale = raymath.MatrixScale(5*mm, 5*mm, 25*mm)
 			}
 
 			var hingeCenter raylib.Vector3
 			raymath.Vector3Transform(&hingeCenter, transform)
 			model.AddLabel(fmt.Sprintf("%.0f", hinge.Angle*g.RadToDeg), hingeCenter, raylib.Black)
 
-			hingePointMin := raylib.Vector3{20 * mm, 0, 0}
-			hingePointZero := raylib.Vector3{20 * mm, 0, 0}
-			hingePointMax := raylib.Vector3{20 * mm, 0, 0}
+			hingePointMin := raylib.Vector3{30 * mm, 0, 0}
+			hingePointZero := raylib.Vector3{30 * mm, 0, 0}
+			hingePointMax := raylib.Vector3{30 * mm, 0, 0}
 
 			raymath.Vector3Transform(&hingePointMin, raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Range.Min)))
 			raymath.Vector3Transform(&hingePointZero, raymath.MatrixMultiply(transform, newRotation(hinge.Zero)))
@@ -373,8 +412,13 @@ func (model *Model) Draw() {
 			boneTransform := raymath.MatrixMultiply(transform,
 				raymath.MatrixTranslate(hingeLength/2, 0, 0))
 
-			model.Bone.Transform = raymath.MatrixMultiply(boneTransform,
-				raymath.MatrixScale(hingeLength, 4*mm, 4*mm))
+			if hinge == &leg.Tibia {
+				model.Bone.Transform = raymath.MatrixMultiply(boneTransform,
+					raymath.MatrixScale(hingeLength, 8*mm, 8*mm))
+			} else {
+				model.Bone.Transform = raymath.MatrixMultiply(boneTransform,
+					raymath.MatrixScale(hingeLength, 12*mm, 20*mm))
+			}
 
 			raylib.DrawModel(model.Hinge, zero, 1, raylib.Blue)
 
@@ -392,7 +436,7 @@ func (model *Model) Draw() {
 			effectorColor = raylib.Red
 		}
 		model.Effector.Transform = raymath.MatrixMultiply(transform,
-			raymath.MatrixScale(5*mm, 5*mm, 5*mm))
+			raymath.MatrixScale(3*mm, 10*mm, 10*mm))
 		raylib.DrawModel(model.Effector, zero, 1, effectorColor)
 
 		var effectorWorldSpace raylib.Vector3
@@ -417,7 +461,7 @@ func (model *Model) DrawUI(camera raylib.Camera) {
 	for i := range model.Labels {
 		label := &model.Labels[i]
 		screen := raylib.GetWorldToScreen(label.Position, camera)
-		raylib.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, label.Color)
+		raylib.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, raylib.Fade(label.Color, 0.7))
 	}
 
 	min := raylib.Vector2{10, 30}
