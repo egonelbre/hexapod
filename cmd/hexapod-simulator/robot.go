@@ -102,6 +102,17 @@ func (model *Model) walk(time float32) {
 		sn, cs := g.Sincos(time + leg.Phase)
 
 		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.X = leg.Offset.X
+
+		side := g.Length(1)
+		if leg.IK.Target.Z < 0 {
+			side = -1
+		}
+		if leg.Name[1] != 'M' {
+			leg.IK.Target.Z += side * 10 * g.MM
+		} else {
+			leg.IK.Target.Z -= side * 10 * g.MM
+		}
 
 		leg.IK.Target.Y = g.Length(20 * cs * g.MM.Float32())
 		leg.IK.Target.X += g.Length(20 * sn * g.MM.Float32())

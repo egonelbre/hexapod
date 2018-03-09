@@ -9,11 +9,8 @@ const (
 	legRot = g.Tau / 8           //TODO: fix
 	legY   = 28*g.MM - 45*g.MM/2 // relative to body center
 
-	// femurAngleOffset = g.Tau/8
-	// tibiaAngleOffset = g.Tau/8
-
-	femurAngleOffset = 0
-	tibiaAngleOffset = 0
+	femurAngleOffset = 0 // + g.Tau/8
+	tibiaAngleOffset = 0 // + g.Tau/8
 
 	servo_sg92r_sec_per60deg = 0.1
 	servo_sg92r_speed        = 60.0 * g.DegToRad / servo_sg92r_sec_per60deg
