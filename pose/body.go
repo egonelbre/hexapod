@@ -70,6 +70,7 @@ type Hinge struct {
 	Zero   g.Radians
 	Length g.Length
 	Range  HingeRange
+	Speed  g.Radians // per second
 
 	// runtime
 	Angle g.Radians

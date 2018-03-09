@@ -3,8 +3,10 @@ package g
 import "math"
 
 const (
-	Tau      Radians = 2 * math.Pi
-	RadToDeg         = 360 / Tau
+	Tau Radians = 2 * math.Pi
+
+	RadToDeg = 360 / Tau
+	DegToRad = Tau / 360
 )
 
 type Radians = float32

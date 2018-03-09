@@ -14,6 +14,9 @@ const (
 
 	femurAngleOffset = 0
 	tibiaAngleOffset = 0
+
+	servo_sg92r_sec_per60deg = 0.1
+	servo_sg92r_speed        = 60.0 * g.DegToRad / servo_sg92r_sec_per60deg
 )
 
 func ZeroPose() *pose.Body {
@@ -45,16 +48,19 @@ func ZeroLeg(name string, offset g.Vec, zero g.Radians, side g.Radians, phase g.
 			Axis:   pose.Y,
 			Zero:   zero,
 			Length: 12 * g.MM,
+			Speed:  servo_sg92r_speed,
 			Range:  pose.HingeRange{side * -g.Tau / 4, side * g.Tau / 4},
 		},
 		Femur: pose.Hinge{
 			Axis:   pose.Z,
 			Length: 38 * g.MM,
+			Speed:  servo_sg92r_speed,
 			Range:  pose.HingeRange{g.Tau/4 + femurAngleOffset, -g.Tau/4 + femurAngleOffset},
 		},
 		Tibia: pose.Hinge{
 			Axis:   pose.Z,
 			Length: 50 * g.MM,
+			Speed:  servo_sg92r_speed,
 			Range:  pose.HingeRange{g.Tau/4 + tibiaAngleOffset, -g.Tau/4 + tibiaAngleOffset},
 		},
 		IK: pose.LegIK{
