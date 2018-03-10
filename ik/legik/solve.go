@@ -21,29 +21,24 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 
 	// Calculate Coxa.Angle by looking in Body-Space top-down
 
-	// bodyTarget := body.Orient.InvMat().Transform(worldTarget.Sub(body.Origin))
-	//bodyTarget := g.Translate(-body.Origin.X, -body.Origin.Y, -body.Origin.Z).
-	//	Mul(body.Orient.InvMat()).
-	//	Transform(worldTarget)
 	legTarget := g.Identity().
 		Mul(g.Translate(-leg.Offset.X, -leg.Offset.Y, -leg.Offset.Z)).
 		Mul(body.Orient.InvMat()).
 		Mul(g.Translate(-body.Origin.X, -body.Origin.Y, -body.Origin.Z)).
 		Transform(worldTarget)
-	// bodyTarget.Sub(leg.Offset)
 
-	// bodyTranslate := g.Translate(-body.Origin.X, -body.Origin.Y, -body.Origin.Z)
+	// bodyTarget := body.Orient.InvMat().Transform(worldTarget.Sub(body.Origin))
+	// legTarget := bodyTarget.Sub(leg.Offset)
+
 	coxaAngleRelativeToForward := -g.Atan2(legTarget.X, legTarget.Z)
-
 	leg.Coxa.Angle = g.Radians(coxaAngleRelativeToForward) - leg.Coxa.Zero + g.Tau/4
 
 	if leg.Coxa.Angle > g.Tau/2 {
 		leg.Coxa.Angle = leg.Coxa.Angle - g.Tau
 	}
-
-	//if leg.Coxa.Clamp() {
-	//	coxaAngleRelativeToForward = coxaAngleRelativeToForward + leg.Coxa.Zero - g.Tau/4
-	//}
+	if leg.Coxa.Clamp() {
+		coxaAngleRelativeToForward = coxaAngleRelativeToForward + leg.Coxa.Zero - g.Tau/4
+	}
 
 	//  +---------------------------------------------------------+
 	//  | in Coxa coordinate space (leg side-view)                |
@@ -79,8 +74,8 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 		// too far away, straighten leg and point at
 		leg.Femur.Angle = footToTargetAngle
 		leg.Tibia.Angle = 0
-		/*
-			if pose.VectorPlanted(worldTarget) {
+		if pose.VectorPlanted(worldTarget) {
+			/*
 				// if the target should be planted, try to plant foot
 				footLength := leg.Femur.Length + leg.Tibia.Length
 				if footLength > g.Abs(coxaOrigin.Y) {
@@ -88,8 +83,8 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 				} else {
 					leg.Femur.Angle = g.Tau / 4
 				}
-			}
-		*/
+			*/
+		}
 		leg.Femur.Clamp()
 		return false
 	}
@@ -105,9 +100,9 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 		leg.Tibia.Angle = -(g.Tau/2 - tibiaInternalAngle)
 	}
 
-	return true
 	if leg.Tibia.Clamp() {
-		if pose.VectorPlanted(worldTarget) { /*
+		if pose.VectorPlanted(worldTarget) {
+			/*
 				footLength2 := femurLength2 + tibiaLength2 - g.Length((2*leg.Femur.Length*leg.Tibia.Length).Float32()*g.Cos(leg.Tibia.Angle))
 				footLength := footLength2.Sqrt()
 
