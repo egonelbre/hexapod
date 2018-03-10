@@ -77,7 +77,7 @@ func (model *Model) Update() {
 	// time := 2 * float32(raylib.GetMouseX()) / float32(raylib.GetScreenWidth())
 	time := raylib.GetTime() * 8
 
-	model.walk(time)
+	model.stand(time)
 	//model.tippyTaps1(time)
 	//model.tippyTaps2(time)
 	//model.tapping(time)
@@ -85,6 +85,31 @@ func (model *Model) Update() {
 	//model.yay(time)
 
 	legik.Solve(model.Pose)
+}
+
+func (model *Model) stand(time float32) {
+	time = time * 0.5
+
+	model.Pose.Orient.Pitch = g.Sin(time*0.1) * g.Tau / 32
+	model.Pose.Orient.Yaw = g.Sin(time*0.14) * g.Tau / 32
+	model.Pose.Orient.Roll = g.Sin(time*0.20) * g.Tau / 32
+
+	bodyOscY := g.Sin(time)
+	if bodyOscY < 0 {
+		bodyOscY = -bodyOscY
+	}
+	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+
+	bodyOscX := g.Sin(time * 0.5)
+	bodyOscZ := g.Cos(time + g.Tau/16)
+	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	model.Pose.Origin.Z = g.Length(7*bodyOscZ) * g.MM
+
+	for _, leg := range model.Pose.Legs() {
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.Y = 0
+		leg.IK.Planted = true
+	}
 }
 
 func (model *Model) walk(time float32) {
@@ -232,14 +257,6 @@ func (model *Model) tapping(time float32) {
 	time *= 0.2
 	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
 
-	//bodyOscY := g.Sin(time)
-	//if bodyOscY < 0 {
-	//	bodyOscY = -bodyOscY
-	//}
-	//model.Pose.Origin.Y = g.Length(bodyOscY*float32(10*g.MM)) + model.Pose.Size.Y
-
-	//bodyOscX := g.Sin(time)
-	//model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
 	bodyOscZ := g.Cos(time)
 	model.Pose.Origin.Z = g.Length(10*bodyOscZ) * g.MM
 
@@ -275,11 +292,6 @@ func (model *Model) impatient(time float32) {
 	}
 	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
 
-	//bodyOscX := g.Sin(time)
-	//model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	//bodyOscZ := g.Cos(time)
-	//model.Pose.Origin.Z = g.Length(3*bodyOscZ) * g.MM
-
 	for _, leg := range model.Pose.Legs() {
 		if leg.Name != "RF" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
@@ -312,11 +324,6 @@ func (model *Model) yay(time float32) {
 	}
 	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
 
-	//bodyOscX := g.Sin(time)
-	//model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	//bodyOscZ := g.Cos(time)
-	//model.Pose.Origin.Z = g.Length(3*bodyOscZ) * g.MM
-
 	for _, leg := range model.Pose.Legs() {
 		if leg.Name != "RF" && leg.Name != "LF" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
@@ -343,25 +350,37 @@ func (model *Model) AddLabel(text string, pos raylib.Vector3, col raylib.Color) 
 	model.Labels = append(model.Labels, Label{pos, text, col})
 }
 
+func matmul(m raylib.Matrix, xs ...raylib.Matrix) raylib.Matrix {
+	for i := range xs {
+		m = raymath.MatrixMultiply(m, xs[i])
+	}
+	return m
+}
+
 func (model *Model) Draw() {
 	model.Labels = model.Labels[:0]
 	model.AddLabel(".", model.Pose.Origin.Meters(), raylib.Black)
 
 	zero := raylib.Vector3{}
-	center := raylib.Vector3{}
 
-	bodyTransform := raymath.MatrixTranslate(model.Pose.Origin.XYZ())
+	bodyTransform := matmul(
+		raymath.MatrixTranslate(model.Pose.Origin.XYZ()),
+		raymath.MatrixRotateY(model.Pose.Orient.Yaw),
+		raymath.MatrixRotateZ(model.Pose.Orient.Pitch),
+		raymath.MatrixRotateX(model.Pose.Orient.Roll),
+	)
 
-	model.Head.Transform = bodyTransform
+	model.Head.Transform = raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(model.Pose.Head.Offset.XYZ()))
 	model.Body.Transform = bodyTransform
-	raylib.DrawModel(model.Head, model.Pose.Head.Offset.Meters(), 1, raylib.DarkGray)
-	raylib.DrawModel(model.Body, center, 1, raylib.Gray)
+	raylib.DrawModel(model.Head, zero, 1, raylib.DarkGray)
+	raylib.DrawModel(model.Body, zero, 1, raylib.Gray)
 
 	zmm := (model.Pose.Size.Z/2 + model.LegPlateSize.Z/2).Meters()
 	ymm := model.Pose.Leg.RF.Offset.Y.Meters()
-	model.LegPlate.Transform = bodyTransform
-	raylib.DrawModel(model.LegPlate, raylib.Vector3{0, ymm, +zmm}, 1, raylib.LightGray)
-	raylib.DrawModel(model.LegPlate, raylib.Vector3{0, ymm, -zmm}, 1, raylib.LightGray)
+	model.LegPlate.Transform = raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(0, ymm, +zmm))
+	raylib.DrawModel(model.LegPlate, zero, 1, raylib.LightGray)
+	model.LegPlate.Transform = raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(0, ymm, -zmm))
+	raylib.DrawModel(model.LegPlate, zero, 1, raylib.LightGray)
 
 	mm := g.MM.Meters()
 

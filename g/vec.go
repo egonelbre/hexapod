@@ -35,6 +35,14 @@ func (a Vec) Mul(b Vec) Vec {
 	}
 }
 
+func (a Vec) Neg() Vec {
+	return Vec{
+		X: -a.X,
+		Y: -a.Y,
+		Z: -a.Z,
+	}
+}
+
 func (a Vec) Scale(s float32) Vec {
 	return Vec{
 		X: Length(float32(a.X) * s),

@@ -5,6 +5,7 @@ import "github.com/egonelbre/hexapod/g"
 type Body struct {
 	Size   g.Vec
 	Origin g.Vec
+	Orient g.Orient
 	Head   Head
 	Leg    Legs
 }

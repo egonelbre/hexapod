@@ -1,0 +1,75 @@
+Rx(a) := matrix(
+	[1, 0, 0, 0],
+	[0, cos(a), -sin(a), 0],
+	[0, sin(a), cos(a), 0],
+	[0,0,0,1]
+);
+
+Ry(a) := matrix(
+	[cos(a), 0, sin(a), 0],
+	[0, 1, 0, 0],
+	[-sin(a), 0, cos(a), 0],
+	[0, 0, 0, 1]
+);
+
+Rz(a) := matrix(
+	[cos(a), -sin(a), 0, 0],
+	[sin(a), cos(a), 0, 0],
+	[0, 0, 1, 0],
+	[0, 0, 0, 1]
+);
+
+T(v) := matrix(
+	[1, 0, 0, v[1]],
+	[0, 1, 0, v[2]],
+	[0, 0, 1, v[3]],
+	[0, 0, 0, 1]
+);
+
+
+Q: ratsimp(trigsimp(
+	T([B_x, B_y, B_z]) .
+	T([L_x, L_y, L_z]) .
+	Ry(C_A) .
+	T([C_L, 0, 0]) .
+	Rz(F_A) .
+	T([F_L, 0, 0]) .
+	Rz(T_A) .
+	T([T_L, 0, 0])
+));
+
+Q_i: ratsimp(trigsimp(
+	T([-T_L, 0, 0]) .
+	Rz(-T_A) .
+	T([-F_L, 0, 0]) .
+	Rz(-F_A) .
+	T([-C_L, 0, 0]) .
+	Ry(-C_A) .
+	T(-[L_x, L_y, L_z]) .
+	T(-[B_x, B_y, B_z])
+));
+
+
+W: ratsimp(trigsimp(
+	T([B_x, B_y, B_z]) .
+	Ry(A_y) . Rz(A_z) . Rx(A_x) .
+	T([L_x, L_y, L_z]) .
+	Ry(C_A) .
+	T([C_L, 0, 0]) .
+	Rz(F_A) .
+	T([F_L, 0, 0]) .
+	Rz(T_A) .
+	T([T_L, 0, 0])
+));
+
+W_i: ratsimp(trigsimp(
+	T([-T_L, 0, 0]) .
+	Rz(-T_A) .
+	T([-F_L, 0, 0]) .
+	Rz(-F_A) .
+	T([-C_L, 0, 0]) .
+	Ry(-C_A) .
+	T(-[L_x, L_y, L_z]) .
+	Rx(-A_x) . Rz(-A_z) . Ry(-A_y) . 
+	T(-[B_x, B_y, B_z])
+));

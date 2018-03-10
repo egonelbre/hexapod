@@ -2,15 +2,20 @@ package g_test
 
 import (
 	"testing"
+	"testing/quick"
 
 	"github.com/egonelbre/hexapod/g"
 )
 
-func approxEqual(a, b g.Vec) bool {
+func approxEqualVec(a, b g.Vec) bool {
 	return a.Sub(b).Length() < 0.1*g.MM
 }
 
-func TestRotation(t *testing.T) {
+func approxEqualMat(a, b g.Mat) bool {
+	return a.Sub(b).Abs().GrandSum() < 1e-6
+}
+
+func TestRotate(t *testing.T) {
 	const one = 1 * g.MM
 
 	v := g.Vec{one, one, one}
@@ -53,9 +58,45 @@ func TestRotation(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		r := v.Transform(c.M)
-		if !approxEqual(r, c.R) {
+		r := c.M.Transform(v)
+		if !approxEqualVec(r, c.R) {
 			t.Errorf("%d: got %v; exp %v", i, r, c.R)
 		}
+	}
+}
+
+func TestRotateX(t *testing.T) {
+	f := func(x int) bool {
+		r := float32(x) / 1e6
+		w := g.RotateX(r).Mul(g.RotateX(-r))
+		return approxEqualMat(w, g.Identity())
+	}
+
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRotateY(t *testing.T) {
+	f := func(x int) bool {
+		r := float32(x) / 1e6
+		w := g.RotateY(r).Mul(g.RotateY(-r))
+		return approxEqualMat(w, g.Identity())
+	}
+
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRotateZ(t *testing.T) {
+	f := func(x int) bool {
+		r := float32(x) / 1e6
+		w := g.RotateZ(r).Mul(g.RotateZ(-r))
+		return approxEqualMat(w, g.Identity())
+	}
+
+	if err := quick.Check(f, nil); err != nil {
+		t.Error(err)
 	}
 }

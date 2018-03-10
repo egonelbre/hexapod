@@ -20,18 +20,30 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 	// TODO: handle body rotation
 
 	// Calculate Coxa.Angle by looking in Body-Space top-down
-	coxaOrigin := body.Origin.Add(leg.Offset)
-	target := worldTarget.Sub(coxaOrigin)
-	coxaAngleRelativeToForward := -g.Atan2(target.X, target.Z)
+
+	// bodyTarget := body.Orient.InvMat().Transform(worldTarget.Sub(body.Origin))
+	//bodyTarget := g.Translate(-body.Origin.X, -body.Origin.Y, -body.Origin.Z).
+	//	Mul(body.Orient.InvMat()).
+	//	Transform(worldTarget)
+	legTarget := g.Identity().
+		Mul(g.Translate(-leg.Offset.X, -leg.Offset.Y, -leg.Offset.Z)).
+		Mul(body.Orient.InvMat()).
+		Mul(g.Translate(-body.Origin.X, -body.Origin.Y, -body.Origin.Z)).
+		Transform(worldTarget)
+	// bodyTarget.Sub(leg.Offset)
+
+	// bodyTranslate := g.Translate(-body.Origin.X, -body.Origin.Y, -body.Origin.Z)
+	coxaAngleRelativeToForward := -g.Atan2(legTarget.X, legTarget.Z)
+
 	leg.Coxa.Angle = g.Radians(coxaAngleRelativeToForward) - leg.Coxa.Zero + g.Tau/4
 
 	if leg.Coxa.Angle > g.Tau/2 {
 		leg.Coxa.Angle = leg.Coxa.Angle - g.Tau
 	}
 
-	if leg.Coxa.Clamp() {
-		coxaAngleRelativeToForward = coxaAngleRelativeToForward + leg.Coxa.Zero - g.Tau/4
-	}
+	//if leg.Coxa.Clamp() {
+	//	coxaAngleRelativeToForward = coxaAngleRelativeToForward + leg.Coxa.Zero - g.Tau/4
+	//}
 
 	//  +---------------------------------------------------------+
 	//  | in Coxa coordinate space (leg side-view)                |
@@ -50,7 +62,7 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 	//  +---------------------------------------------------------+
 
 	// move into Coxa space
-	target = target.Transform(g.RotateY(-coxaAngleRelativeToForward))
+	target := g.RotateY(-coxaAngleRelativeToForward).Transform(legTarget)
 
 	// move 0,0,0 to Femur root
 	target.X = 0
@@ -67,17 +79,17 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 		// too far away, straighten leg and point at
 		leg.Femur.Angle = footToTargetAngle
 		leg.Tibia.Angle = 0
-
-		if pose.VectorPlanted(worldTarget) {
-			// if the target should be planted, try to plant foot
-			footLength := leg.Femur.Length + leg.Tibia.Length
-			if footLength > g.Abs(coxaOrigin.Y) {
-				leg.Femur.Angle = g.Asin(coxaOrigin.Y.Float32() / footLength.Float32())
-			} else {
-				leg.Femur.Angle = g.Tau / 4
+		/*
+			if pose.VectorPlanted(worldTarget) {
+				// if the target should be planted, try to plant foot
+				footLength := leg.Femur.Length + leg.Tibia.Length
+				if footLength > g.Abs(coxaOrigin.Y) {
+					leg.Femur.Angle = g.Asin(coxaOrigin.Y.Float32() / footLength.Float32())
+				} else {
+					leg.Femur.Angle = g.Tau / 4
+				}
 			}
-		}
-
+		*/
 		leg.Femur.Clamp()
 		return false
 	}
@@ -93,15 +105,17 @@ func SolveLeg(body *pose.Body, leg *pose.Leg, worldTarget g.Vec) bool {
 		leg.Tibia.Angle = -(g.Tau/2 - tibiaInternalAngle)
 	}
 
+	return true
 	if leg.Tibia.Clamp() {
-		if pose.VectorPlanted(worldTarget) {
-			footLength2 := femurLength2 + tibiaLength2 - g.Length((2*leg.Femur.Length*leg.Tibia.Length).Float32()*g.Cos(leg.Tibia.Angle))
-			footLength := footLength2.Sqrt()
+		if pose.VectorPlanted(worldTarget) { /*
+				footLength2 := femurLength2 + tibiaLength2 - g.Length((2*leg.Femur.Length*leg.Tibia.Length).Float32()*g.Cos(leg.Tibia.Angle))
+				footLength := footLength2.Sqrt()
 
-			footInternalAngle := g.Asin(leg.Tibia.Length.Float32() * g.Sin(leg.Tibia.Angle) / footLength.Float32())
-			footAngle := g.Asin(coxaOrigin.Y.Float32() / footLength.Float32())
+				footInternalAngle := g.Asin(leg.Tibia.Length.Float32() * g.Sin(leg.Tibia.Angle) / footLength.Float32())
+				footAngle := g.Asin(coxaOrigin.Y.Float32() / footLength.Float32())
 
-			leg.Femur.Angle = footAngle - footInternalAngle
+				leg.Femur.Angle = footAngle - footInternalAngle
+			*/
 		}
 		leg.Femur.Clamp()
 		return false

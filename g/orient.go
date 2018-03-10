@@ -6,15 +6,14 @@ type Orient struct {
 	Roll  Radians // rotation around X
 }
 
-func (orient Orient) Matrix() Mat {
-	sy, cy := Sincos(orient.Yaw)
-	sz, cz := Sincos(orient.Pitch)
-	sx, cx := Sincos(orient.Roll)
+func (orient Orient) Mat() Mat {
+	return RotateY(orient.Yaw).
+		Mul(RotateZ(orient.Pitch)).
+		Mul(RotateX(orient.Roll))
+}
 
-	return Mat{
-		cy * cz, (cx * sz) + ((sx * cz) * sy), (sx * sz) - ((cx * cz) * sy), 0,
-		-cy * sz, (cx * cz) - ((sx * sz) * sy), (sx * cz) + ((cx * sz) * sy), 0,
-		sy, -sx * cy, cx * cy, 0,
-		0, 0, 0, 1,
-	}
+func (orient Orient) InvMat() Mat {
+	return RotateX(-orient.Roll).
+		Mul(RotateZ(-orient.Pitch)).
+		Mul(RotateY(-orient.Yaw))
 }
