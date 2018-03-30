@@ -16,7 +16,8 @@ func (length Length) Millimeters() float32 { return length.Float32() / MM.Float3
 func (length Length) Float64() float64 { return float64(length) }
 func (length Length) Float32() float32 { return float32(length) }
 
-func (length Length) Sqrt() Length { return Length(math.Sqrt(float64(length))) }
+func (length Length) Scale(v float32) Length { return Length(float32(length) * v) }
+func (length Length) Sqrt() Length           { return Length(math.Sqrt(float64(length))) }
 
 func Abs(v Length) Length {
 	if v < 0 {

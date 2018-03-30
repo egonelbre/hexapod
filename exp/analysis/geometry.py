@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import numpy
 import sympy
 
 sympy.init_printing()
@@ -87,7 +86,7 @@ def basic():
 			sympy.Matrix([0,0,0,1])
 		)
 
-	sympy.pprint(sympy.solve(sympy.Eq(target, Vector("T")), coxaAngle))
+	sympy.pprint(sympy.cse(sympy.solve(sympy.Eq(target, Vector("T")), coxaAngle)))
 
 def alternate():
 	yaw, pitch, roll = sympy.symbols("yaw pitch roll")
@@ -112,11 +111,11 @@ def alternate():
 			Vector("T")
 		)
 
-	print(target)
+	print(sympy.cse(target))
 
-	solution = sympy.solve(
+	solution = sympy.cse(sympy.solve(
 		sympy.Eq(target, sympy.Matrix([0,0,0,1])), 
-		coxaAngle)
+		coxaAngle))
 	sympy.pprint(solution)
 
 

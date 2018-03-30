@@ -6,127 +6,107 @@ import (
 	"github.com/egonelbre/hexapod/g"
 	"github.com/egonelbre/hexapod/ik/legik"
 	"github.com/egonelbre/hexapod/pose"
-
 	"github.com/gen2brain/raylib-go/raylib"
-	"github.com/gen2brain/raylib-go/raymath"
 )
 
-type Model struct {
-	Pose *pose.Body
-
-	Shader raylib.Shader
-	Labels []Label
-
-	Head raylib.Model
-	Body raylib.Model
-
-	LegPlateSize g.Vec
-	LegPlate     raylib.Model
-
-	Bone     raylib.Model
-	Hinge    raylib.Model
-	Effector raylib.Model
+type Robot struct {
+	Body     *pose.Body
+	Time     float32
+	Active   int
+	Controls []Control
 }
 
-type Label struct {
-	Position raylib.Vector3
-	Text     string
-	Color    raylib.Color
-}
-
-func NewModel(pose *pose.Body) *Model {
-	model := &Model{}
-	model.Pose = pose
-
-	model.Shader = raylib.LoadShader("shader/base.vs", "shader/lighting.fs")
-	model.Shader.Locs[raylib.LocMatrixModel] = raylib.GetShaderLocation(model.Shader, "mMatrix")
-	model.Shader.Locs[raylib.LocMatrixView] = raylib.GetShaderLocation(model.Shader, "view")
-	model.Shader.Locs[raylib.LocVectorView] = raylib.GetShaderLocation(model.Shader, "viewPos")
-
-	size := pose.Size.Meters()
-	mm := g.MM.Meters()
-
-	model.Head = raylib.LoadModelFromMesh(raylib.GenMeshCube(30*mm, 30*mm, 30*mm))
-	model.Body = raylib.LoadModelFromMesh(raylib.GenMeshCube(size.X, size.Y, size.Z))
-
-	model.LegPlateSize = g.Vec{
-		X: pose.Leg.RF.Offset.X - pose.Leg.RB.Offset.X - 5*g.MM,
-		Y: 3 * g.MM,
-		Z: pose.Leg.RM.Offset.Z - pose.Size.Z/2 - 2*g.MM,
+func NewRobot(body *pose.Body) *Robot {
+	robot := &Robot{}
+	robot.Body = body
+	robot.Controls = []Control{
+		&Controller{},
+		&Stand{},
+		&Stand{},
+		&TippyTaps1{},
+		&TippyTaps2{},
+		&TippyTaps3{},
+		&Tapping{},
+		&Impatient{},
+		&Yay{},
 	}
-	model.LegPlate = raylib.LoadModelFromMesh(raylib.GenMeshCube(model.LegPlateSize.XYZ()))
-
-	// size is assigned dynamically with scaling
-	model.Bone = raylib.LoadModelFromMesh(raylib.GenMeshCube(1, 1, 1))
-	model.Hinge = raylib.LoadModelFromMesh(raylib.GenMeshCube(1, 1, 1))
-	model.Effector = raylib.LoadModelFromMesh(raylib.GenMeshCube(1, 1, 1))
-
-	model.Head.Material.Shader = model.Shader
-	model.Body.Material.Shader = model.Shader
-
-	model.LegPlate.Material.Shader = model.Shader
-
-	model.Bone.Material.Shader = model.Shader
-	model.Hinge.Material.Shader = model.Shader
-	model.Effector.Material.Shader = model.Shader
-
-	return model
+	return robot
 }
 
-func (model *Model) Update() {
-	// time := 2 * float32(raylib.GetMouseX()) / float32(raylib.GetScreenWidth())
-	time := raylib.GetTime() * 8
-
-	model.stand(time)
-	//model.tippyTaps1(time)
-	//model.tippyTaps2(time)
-	//model.tapping(time)
-	//model.impatient(time)
-	//model.yay(time)
-
-	legik.Solve(model.Pose)
+func (robot *Robot) ModeName() string {
+	return ControlName(robot.Controls[robot.Active])
 }
-
-func (model *Model) stand(time float32) {
-	time = time * 0.5
-
-	model.Pose.Orient.Pitch = g.Sin(time*0.1) * g.Tau / 32
-	model.Pose.Orient.Yaw = g.Sin(time*0.14) * g.Tau / 32
-	model.Pose.Orient.Roll = g.Sin(time*0.20) * g.Tau / 32
-
-	bodyOscY := g.Sin(time)
-	if bodyOscY < 0 {
-		bodyOscY = -bodyOscY
+func (robot *Robot) Toggle(inc int) {
+	robot.Active += inc
+	for robot.Active < 0 {
+		robot.Active += len(robot.Controls)
 	}
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+	for robot.Active >= len(robot.Controls) {
+		robot.Active -= len(robot.Controls)
+	}
+}
+
+func (robot *Robot) Update(dt float32) {
+	robot.Time += dt
+
+	control := robot.Controls[robot.Active]
+	control.Update(robot.Body, robot.Time, dt)
+
+	legik.Solve(robot.Body)
+}
+
+type Control interface {
+	Update(body *pose.Body, time, dt float32)
+}
+
+func ControlName(control Control) string { return fmt.Sprintf("%T", control) }
+
+type Controller struct {
+	Move g.Vec
+
+	Yaw   float32
+	Pitch float32
+	Roll  float32
+
+	Elevation g.Length
+}
+
+func (ctrl *Controller) readInput() {
+	if raylib.IsGamepadAvailable(0) {
+		leftX := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisLeftX)
+		leftY := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisLeftY)
+
+		rightX := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisRightX)
+		rightY := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisRightY)
+
+		rightTrigger := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisRt)
+
+		ctrl.Move.X = g.Length(leftX * float32(g.M))
+		ctrl.Move.Y = g.Length(leftY * float32(g.M))
+		ctrl.Move = ctrl.Move.NormalizedTo(20 * g.MM)
+
+		ctrl.Roll = rightX * g.Tau / 16
+		ctrl.Pitch = rightY * g.Tau / 16
+
+		ctrl.Elevation = (20 * g.MM).Scale(rightTrigger*0.5 + 0.5)
+	}
+}
+
+func (ctrl *Controller) Update(body *pose.Body, time, dt float32) {
+	ctrl.readInput()
 
 	bodyOscX := g.Sin(time * 0.5)
 	bodyOscZ := g.Cos(time + g.Tau/16)
-	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	model.Pose.Origin.Z = g.Length(7*bodyOscZ) * g.MM
 
-	for _, leg := range model.Pose.Legs() {
-		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
-		leg.IK.Target.Y = 0
-		leg.IK.Planted = true
-	}
-}
+	body.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	body.Origin.Z = g.Length(7*bodyOscZ) * g.MM
+	body.Origin.Y = ctrl.Elevation + body.Size.Y*0.5 + 30*g.MM
 
-func (model *Model) walk(time float32) {
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+	body.Orient.Yaw = ctrl.Yaw
+	body.Orient.Pitch = ctrl.Pitch
+	body.Orient.Roll = ctrl.Roll
 
-	bodyOscY := g.Sin(time)
-	if bodyOscY < 0 {
-		bodyOscY = -bodyOscY
-	}
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
-
-	bodyOscX := g.Sin(time * 0.5)
-	bodyOscZ := g.Cos(time + g.Tau/16)
-	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	model.Pose.Origin.Z = g.Length(7*bodyOscZ) * g.MM
-
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
 		sn, cs := g.Sincos(time + leg.Phase)
 
 		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
@@ -136,6 +116,7 @@ func (model *Model) walk(time float32) {
 		if leg.IK.Target.Z < 0 {
 			side = -1
 		}
+
 		if leg.Name[1] != 'M' {
 			leg.IK.Target.Z += side * 10 * g.MM
 		} else {
@@ -153,18 +134,45 @@ func (model *Model) walk(time float32) {
 	}
 }
 
-func (model *Model) tippyTaps1(time float32) {
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+type Stand struct{}
 
-	bodyOscY := g.Sin(time * 2)
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+func (*Stand) Update(body *pose.Body, time, dt float32) {
+	bodyOscY := g.Sin(time)
+	if bodyOscY < 0 {
+		bodyOscY = -bodyOscY
+	}
+	body.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + body.Size.Y
+
+	body.Orient.Pitch = g.Sin(time*0.1) * g.Tau / 32
+	body.Orient.Yaw = g.Sin(time*0.14) * g.Tau / 32
+	body.Orient.Roll = g.Sin(time*0.20) * g.Tau / 32
 
 	bodyOscX := g.Sin(time * 0.5)
 	bodyOscZ := g.Cos(time + g.Tau/16)
-	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	model.Pose.Origin.Z = g.Length(5*bodyOscZ) * g.MM
+	body.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	body.Origin.Z = g.Length(7*bodyOscZ) * g.MM
 
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
+		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
+		leg.IK.Target.Y = 0
+		leg.IK.Planted = true
+	}
+}
+
+type TippyTaps1 struct{}
+
+func (*TippyTaps1) Update(body *pose.Body, time, dt float32) {
+	body.Origin.Y = body.Size.Y/2 + body.Size.Y/4
+
+	bodyOscY := g.Sin(time * 2)
+	body.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + body.Size.Y
+
+	bodyOscX := g.Sin(time * 0.5)
+	bodyOscZ := g.Cos(time + g.Tau/16)
+	body.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	body.Origin.Z = g.Length(5*bodyOscZ) * g.MM
+
+	for _, leg := range body.Legs() {
 		_, cs := g.Sincos(time + leg.Phase)
 
 		leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
@@ -178,18 +186,20 @@ func (model *Model) tippyTaps1(time float32) {
 	}
 }
 
-func (model *Model) tippyTaps2(time float32) {
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+type TippyTaps2 struct{}
+
+func (*TippyTaps2) Update(body *pose.Body, time, dt float32) {
+	body.Origin.Y = body.Size.Y/2 + body.Size.Y/4
 
 	bodyOscY := g.Sin(time * 2)
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+	body.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + body.Size.Y
 
 	bodyOscX := g.Sin(time * 0.5)
 	bodyOscZ := g.Cos(time + g.Tau/16)
-	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	model.Pose.Origin.Z = g.Length(10*bodyOscZ) * g.MM
+	body.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	body.Origin.Z = g.Length(10*bodyOscZ) * g.MM
 
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
 		if leg.Name == "RB" || leg.Name == "LB" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 			leg.IK.Target.Y = 0
@@ -210,21 +220,23 @@ func (model *Model) tippyTaps2(time float32) {
 	}
 }
 
-func (model *Model) tippyTaps3(time float32) {
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+type TippyTaps3 struct{}
+
+func (*TippyTaps3) Update(body *pose.Body, time, dt float32) {
+	body.Origin.Y = body.Size.Y/2 + body.Size.Y/4
 
 	bodyOscY := g.Sin(time)
 	if bodyOscY < 0 {
 		bodyOscY = -bodyOscY
 	}
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(10*g.MM)) + model.Pose.Size.Y
+	body.Origin.Y = g.Length(bodyOscY*float32(10*g.MM)) + body.Size.Y
 
 	bodyOscX := g.Sin(time * 0.5)
 	bodyOscZ := g.Cos(time + g.Tau/16)
-	model.Pose.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
-	model.Pose.Origin.Z = g.Length(10*bodyOscZ) * g.MM
+	body.Origin.X = g.Length(3*bodyOscX)*g.MM - 5*g.MM
+	body.Origin.Z = g.Length(10*bodyOscZ) * g.MM
 
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
 		if leg.Name == "RB" || leg.Name == "LB" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 			leg.IK.Target.Y = 0
@@ -253,14 +265,16 @@ func (model *Model) tippyTaps3(time float32) {
 	}
 }
 
-func (model *Model) tapping(time float32) {
+type Tapping struct{}
+
+func (*Tapping) Update(body *pose.Body, time, dt float32) {
 	time *= 0.2
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+	body.Origin.Y = body.Size.Y/2 + body.Size.Y/4
 
 	bodyOscZ := g.Cos(time)
-	model.Pose.Origin.Z = g.Length(10*bodyOscZ) * g.MM
+	body.Origin.Z = g.Length(10*bodyOscZ) * g.MM
 
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
 		if leg.Name != "RF" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 			leg.IK.Target.Y = 0
@@ -282,17 +296,19 @@ func (model *Model) tapping(time float32) {
 	}
 }
 
-func (model *Model) impatient(time float32) {
+type Impatient struct{}
+
+func (*Impatient) Update(body *pose.Body, time, dt float32) {
 	time *= 0.2
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+	body.Origin.Y = body.Size.Y/2 + body.Size.Y/4
 
 	bodyOscY := g.Sin(time*0.5 + g.Tau/8)
 	if bodyOscY < 0 {
 		bodyOscY = -bodyOscY
 	}
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+	body.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + body.Size.Y
 
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
 		if leg.Name != "RF" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 			leg.IK.Target.Y = 0
@@ -314,17 +330,19 @@ func (model *Model) impatient(time float32) {
 	}
 }
 
-func (model *Model) yay(time float32) {
+type Yay struct{}
+
+func (*Yay) Update(body *pose.Body, time, dt float32) {
 	time *= 0.2
-	model.Pose.Origin.Y = model.Pose.Size.Y/2 + model.Pose.Size.Y/4
+	body.Origin.Y = body.Size.Y/2 + body.Size.Y/4
 
 	bodyOscY := g.Sin(time + g.Tau/8)
 	if bodyOscY < 0 {
 		bodyOscY = -bodyOscY
 	}
-	model.Pose.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + model.Pose.Size.Y
+	body.Origin.Y = g.Length(bodyOscY*float32(5*g.MM)) + body.Size.Y
 
-	for _, leg := range model.Pose.Legs() {
+	for _, leg := range body.Legs() {
 		if leg.Name != "RF" && leg.Name != "LF" {
 			leg.IK.Target = leg.Offset.Add(leg.Offset.NormalizedTo(70 * g.MM))
 			leg.IK.Target.Y = 0
@@ -342,197 +360,6 @@ func (model *Model) yay(time float32) {
 		if leg.IK.Target.Y < 0 {
 			leg.IK.Target.Y = 0
 			leg.IK.Planted = true
-		}
-	}
-}
-
-func (model *Model) AddLabel(text string, pos raylib.Vector3, col raylib.Color) {
-	model.Labels = append(model.Labels, Label{pos, text, col})
-}
-
-func matmul(m raylib.Matrix, xs ...raylib.Matrix) raylib.Matrix {
-	for i := range xs {
-		m = raymath.MatrixMultiply(m, xs[i])
-	}
-	return m
-}
-
-func (model *Model) Draw() {
-	model.Labels = model.Labels[:0]
-	model.AddLabel(".", model.Pose.Origin.Meters(), raylib.Black)
-
-	zero := raylib.Vector3{}
-
-	bodyTransform := matmul(
-		raymath.MatrixTranslate(model.Pose.Origin.XYZ()),
-		raymath.MatrixRotateY(model.Pose.Orient.Yaw),
-		raymath.MatrixRotateZ(model.Pose.Orient.Pitch),
-		raymath.MatrixRotateX(model.Pose.Orient.Roll),
-	)
-
-	model.Head.Transform = raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(model.Pose.Head.Offset.XYZ()))
-	model.Body.Transform = bodyTransform
-	raylib.DrawModel(model.Head, zero, 1, raylib.DarkGray)
-	raylib.DrawModel(model.Body, zero, 1, raylib.Gray)
-
-	zmm := (model.Pose.Size.Z/2 + model.LegPlateSize.Z/2).Meters()
-	ymm := model.Pose.Leg.RF.Offset.Y.Meters()
-	model.LegPlate.Transform = raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(0, ymm, +zmm))
-	raylib.DrawModel(model.LegPlate, zero, 1, raylib.LightGray)
-	model.LegPlate.Transform = raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(0, ymm, -zmm))
-	raylib.DrawModel(model.LegPlate, zero, 1, raylib.LightGray)
-
-	mm := g.MM.Meters()
-
-	for _, leg := range model.Pose.Legs() {
-		transform := raymath.MatrixMultiply(bodyTransform, raymath.MatrixTranslate(leg.Offset.XYZ()))
-
-		var labelPosition raylib.Vector3
-		raymath.Vector3Transform(&labelPosition, transform)
-		labelPosition.Y += 30 * mm
-		model.AddLabel(leg.Name+" "+leg.IK.Debug, labelPosition, raylib.Black)
-
-		for _, hinge := range leg.Hinges() {
-			var newRotation func(v float32) raylib.Matrix
-			var hingeScale raylib.Matrix
-			switch hinge.Axis {
-			case pose.X:
-				newRotation = raymath.MatrixRotateX
-				hingeScale = raymath.MatrixScale(25*mm, 5*mm, 5*mm)
-			case pose.Y:
-				newRotation = raymath.MatrixRotateY
-				hingeScale = raymath.MatrixScale(5*mm, 25*mm, 5*mm)
-			case pose.Z:
-				newRotation = raymath.MatrixRotateZ
-				hingeScale = raymath.MatrixScale(5*mm, 5*mm, 25*mm)
-			}
-
-			var hingeCenter raylib.Vector3
-			raymath.Vector3Transform(&hingeCenter, transform)
-			model.AddLabel(fmt.Sprintf("%.0f", hinge.Angle*g.RadToDeg), hingeCenter, raylib.Black)
-
-			hingePointMin := raylib.Vector3{30 * mm, 0, 0}
-			hingePointZero := raylib.Vector3{30 * mm, 0, 0}
-			hingePointMax := raylib.Vector3{30 * mm, 0, 0}
-
-			raymath.Vector3Transform(&hingePointMin, raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Range.Min)))
-			raymath.Vector3Transform(&hingePointZero, raymath.MatrixMultiply(transform, newRotation(hinge.Zero)))
-			raymath.Vector3Transform(&hingePointMax, raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Range.Max)))
-
-			raylib.DrawLine3D(hingeCenter, hingePointMin, raylib.Red)
-			raylib.DrawLine3D(hingeCenter, hingePointZero, raylib.Green)
-			raylib.DrawLine3D(hingeCenter, hingePointMax, raylib.Blue)
-
-			transform = raymath.MatrixMultiply(transform, newRotation(hinge.Zero+hinge.Angle))
-			model.Hinge.Transform = raymath.MatrixMultiply(transform, hingeScale)
-
-			hingeLength := hinge.Length.Meters()
-
-			boneTransform := raymath.MatrixMultiply(transform,
-				raymath.MatrixTranslate(hingeLength/2, 0, 0))
-
-			if hinge == &leg.Tibia {
-				model.Bone.Transform = raymath.MatrixMultiply(boneTransform,
-					raymath.MatrixScale(hingeLength, 8*mm, 8*mm))
-			} else {
-				model.Bone.Transform = raymath.MatrixMultiply(boneTransform,
-					raymath.MatrixScale(hingeLength, 12*mm, 20*mm))
-			}
-
-			raylib.DrawModel(model.Hinge, zero, 1, raylib.Blue)
-
-			if hinge.InBounds() {
-				raylib.DrawModel(model.Bone, zero, 1, raylib.SkyBlue)
-			} else {
-				raylib.DrawModel(model.Bone, zero, 1, raylib.NewColor(255, 102, 191, 255))
-			}
-
-			transform = raymath.MatrixMultiply(transform, raymath.MatrixTranslate(hingeLength, 0, 0))
-		}
-
-		effectorColor := raylib.Blue
-		if !leg.IK.Solved {
-			effectorColor = raylib.Red
-		}
-		model.Effector.Transform = raymath.MatrixMultiply(transform,
-			raymath.MatrixScale(3*mm, 10*mm, 10*mm))
-		raylib.DrawModel(model.Effector, zero, 1, effectorColor)
-
-		var effectorWorldSpace raylib.Vector3
-		raymath.Vector3Transform(&effectorWorldSpace, transform)
-		effectorWorldGround := effectorWorldSpace
-		effectorWorldGround.Y = 0
-
-		raylib.DrawLine3D(effectorWorldSpace, effectorWorldGround, effectorColor)
-
-		plantSize := 5 * mm
-		if leg.IK.Planted {
-			plantSize = 20 * mm
-		}
-		raylib.DrawCubeV(effectorWorldGround, raylib.Vector3{plantSize, 1 * mm, plantSize}, effectorColor)
-
-		//raylib.DrawCircle3D(leg.IK.Target.Meters(), 5*mm, raylib.Vector3{0, 0, 0}, 0, raylib.DarkGreen)
-		raylib.DrawCubeV(leg.IK.Target.Meters(), raylib.Vector3{8 * mm, 1 * mm, 8 * mm}, raylib.Green)
-	}
-}
-
-func (model *Model) DrawUI(camera raylib.Camera) {
-	for i := range model.Labels {
-		label := &model.Labels[i]
-		screen := raylib.GetWorldToScreen(label.Position, camera)
-		raylib.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, raylib.Fade(label.Color, 0.7))
-	}
-
-	min := raylib.Vector2{10, 30}
-	size := raylib.Vector2{200, 200}
-	hudScale := float32(size.X) / 0.6
-
-	center := min
-	center.X += size.X / 2
-	center.Y += size.Y / 2
-
-	raylib.DrawRectangleV(min, size, raylib.Fade(raylib.SkyBlue, 0.5))
-
-	var bodyOrigin raylib.Vector3 = model.Pose.Origin.Scale(hudScale).Meters()
-	var bodySize raylib.Vector3 = model.Pose.Size.Scale(hudScale).Meters()
-	bodyMin := raymath.Vector2Add(center, raylib.Vector2{bodyOrigin.Z, -bodyOrigin.X})
-	bodyMin.X -= bodySize.Z / 2
-	bodyMin.Y -= bodySize.X / 2
-
-	raylib.DrawRectangleV(bodyMin, raylib.Vector2{bodySize.Z, bodySize.X}, raylib.DarkGray)
-
-	plantedPoints := []raylib.Vector2{}
-
-	for _, leg := range model.Pose.Legs() {
-		effectorColor := raylib.Blue
-		if !leg.IK.Solved {
-			effectorColor = raylib.Red
-		}
-		if !leg.IK.Planted {
-			effectorColor = raylib.Fade(effectorColor, 0.5)
-		}
-
-		footSize := raylib.Vector2{10, 10}
-
-		var p raylib.Vector3
-		p = leg.IK.Target.Scale(hudScale).Meters()
-
-		t := raymath.Vector2Add(center, raylib.Vector2{p.Z, -p.X})
-		if leg.IK.Planted {
-			plantedPoints = append(plantedPoints, t)
-		}
-
-		t.X -= footSize.X / 2
-		t.Y -= footSize.Y / 2
-
-		raylib.DrawRectangleV(t, footSize, effectorColor)
-	}
-
-	if len(plantedPoints) >= 2 {
-		p := plantedPoints[len(plantedPoints)-1]
-		for _, n := range plantedPoints {
-			raylib.DrawLineV(p, n, raylib.Blue)
-			p = n
 		}
 	}
 }
