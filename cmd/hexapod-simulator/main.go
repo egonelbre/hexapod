@@ -43,14 +43,14 @@ func main() {
 		raylib.BeginDrawing()
 		raylib.ClearBackground(raylib.RayWhite)
 
-		raylib.Begin3dMode(camera)
+		raylib.BeginMode3D(camera)
 		{
 			raylib.DrawGrid(40, 0.01*g.M.Meters())
 			raylib.DrawGizmo(raylib.Vector3{})
 
 			model.Draw()
 		}
-		raylib.End3dMode()
+		raylib.EndMode3D()
 
 		DrawLabels3D(camera)
 		minimap.Draw()
