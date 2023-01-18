@@ -7,86 +7,84 @@ import (
 	"github.com/egonelbre/hexapod/g"
 
 	"github.com/gen2brain/raylib-go/raygui"
-	"github.com/gen2brain/raylib-go/raylib"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 func main() {
 	screenWidth := int32(1024)
 	screenHeight := int32(768)
 
-	raylib.SetConfigFlags(raylib.FlagMsaa4xHint)
+	rl.SetConfigFlags(rl.FlagMsaa4xHint)
 
-	raylib.InitWindow(screenWidth, screenHeight, "Hexapod Simulator")
-	raylib.SetWindowPosition(-1920/2-screenWidth/2, 1200/2-screenHeight/2)
+	rl.InitWindow(screenWidth, screenHeight, "Hexapod Simulator")
+	rl.SetWindowPosition(10, 10)
 
-	camera := raylib.Camera{}
-	camera.Position = raylib.NewVector3(0.5, 0.5, 0.5)
-	camera.Target = raylib.NewVector3(0.0, 0.0, 0.0)
-	camera.Up = raylib.NewVector3(0.0, 1.0, 0.0)
+	camera := rl.Camera{}
+	camera.Position = rl.NewVector3(0.5, 0.5, 0.5)
+	camera.Target = rl.NewVector3(0.0, 0.0, 0.0)
+	camera.Up = rl.NewVector3(0.0, 1.0, 0.0)
 	camera.Fovy = 30.0
 
-	raylib.SetCameraMode(camera, raylib.CameraFree)
-	//raylib.SetCameraMode(camera, raylib.CameraOrbital)
+	rl.SetCameraMode(camera, rl.CameraFree)
+	//rl.SetCameraMode(camera, rl.CameraOrbital)
 
 	pose := adeept.ZeroPose()
 	robot := NewRobot(pose)
 	model := NewModel(pose)
 	minimap := NewMinimap(pose)
-	minimap.Min = raylib.Vector2{10, 100}
-	minimap.Size = raylib.Vector2{200, 200}
+	minimap.Min = rl.Vector2{10, 100}
+	minimap.Size = rl.Vector2{200, 200}
 
-	raylib.SetTargetFPS(60)
-	for !raylib.WindowShouldClose() {
-		raylib.UpdateCamera(&camera)
-		robot.Update(raylib.GetFrameTime())
+	rl.SetTargetFPS(60)
+	for !rl.WindowShouldClose() {
+		rl.UpdateCamera(&camera)
+		robot.Update(rl.GetFrameTime())
 
-		raylib.BeginDrawing()
-		raylib.ClearBackground(raylib.RayWhite)
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.RayWhite)
 
-		raylib.BeginMode3D(camera)
+		rl.BeginMode3D(camera)
 		{
-			raylib.DrawGrid(40, 0.01*g.M.Meters())
-			raylib.DrawGizmo(raylib.Vector3{})
-
+			rl.DrawGrid(40, 0.01*g.M.Meters())
 			model.Draw()
 		}
-		raylib.EndMode3D()
+		rl.EndMode3D()
 
 		DrawLabels3D(camera)
 		minimap.Draw()
 
-		raylib.DrawFPS(10, 10)
-		if raygui.Button(raylib.Rectangle{10, 40, 20, 20}, "<") {
+		rl.DrawFPS(10, 10)
+		if raygui.Button(rl.Rectangle{10, 40, 20, 20}, "<") {
 			robot.Toggle(-1)
 		}
-		raygui.Label(raylib.Rectangle{40, 40, 140, 20}, robot.ModeName())
-		if raygui.Button(raylib.Rectangle{190, 40, 20, 20}, ">") {
+		raygui.Label(rl.Rectangle{40, 40, 140, 20}, robot.ModeName())
+		if raygui.Button(rl.Rectangle{190, 40, 20, 20}, ">") {
 			robot.Toggle(1)
 		}
 
-		raylib.EndDrawing()
+		rl.EndDrawing()
 	}
 
-	raylib.CloseWindow()
+	rl.CloseWindow()
 }
 
 type Label3D struct {
-	Position raylib.Vector3
+	Position rl.Vector3
 	Text     string
-	Color    raylib.Color
+	Color    rl.Color
 }
 
 var GlobalLabels []Label3D
 
-func DrawLabel3D(text string, pos raylib.Vector3, col raylib.Color) {
+func DrawLabel3D(text string, pos rl.Vector3, col rl.Color) {
 	GlobalLabels = append(GlobalLabels, Label3D{pos, text, col})
 }
 
-func DrawLabels3D(camera raylib.Camera) {
+func DrawLabels3D(camera rl.Camera) {
 	for i := range GlobalLabels {
 		label := &GlobalLabels[i]
-		screen := raylib.GetWorldToScreen(label.Position, camera)
-		raylib.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, raylib.Fade(label.Color, 0.7))
+		screen := rl.GetWorldToScreen(label.Position, camera)
+		rl.DrawText(label.Text, int32(screen.X), int32(screen.Y), 18, rl.Fade(label.Color, 0.7))
 	}
 	GlobalLabels = GlobalLabels[:0]
 }

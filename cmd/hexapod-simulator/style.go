@@ -1,22 +1,22 @@
 package main
 
-import "github.com/gen2brain/raylib-go/raylib"
+import rl "github.com/gen2brain/raylib-go/raylib"
 
 var (
-	HeadColor     = raylib.DarkGray
-	BodyColor     = raylib.Gray
-	LegPlateColor = raylib.LightGray
+	HeadColor     = rl.DarkGray
+	BodyColor     = rl.Gray
+	LegPlateColor = rl.LightGray
 
-	HingeColor      = raylib.Blue
-	HingeErrorColor = raylib.NewColor(255, 102, 191, 255)
+	HingeColor      = rl.Blue
+	HingeErrorColor = rl.NewColor(255, 102, 191, 255)
 
-	HingeMinColor  = raylib.Red
-	HingeZeroColor = raylib.Green
-	HingeMaxColor  = raylib.DarkPurple
+	HingeMinColor  = rl.Red
+	HingeZeroColor = rl.Green
+	HingeMaxColor  = rl.DarkPurple
 
-	BoneColor = raylib.SkyBlue
+	BoneColor = rl.SkyBlue
 
-	EffectorTargetColor  = raylib.Green
-	EffectorColor        = raylib.Blue
-	EffectorInvalidColor = raylib.Red
+	EffectorTargetColor  = rl.Green
+	EffectorColor        = rl.Blue
+	EffectorInvalidColor = rl.Red
 )
