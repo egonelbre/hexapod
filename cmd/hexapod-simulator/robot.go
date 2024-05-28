@@ -6,7 +6,7 @@ import (
 	"github.com/egonelbre/hexapod/g"
 	"github.com/egonelbre/hexapod/ik/legik"
 	"github.com/egonelbre/hexapod/pose"
-	"github.com/gen2brain/raylib-go/raylib"
+	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
 type Robot struct {
@@ -72,14 +72,14 @@ type Controller struct {
 }
 
 func (ctrl *Controller) readInput() {
-	if raylib.IsGamepadAvailable(0) {
-		leftX := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisLeftX)
-		leftY := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisLeftY)
+	if rl.IsGamepadAvailable(0) {
+		leftX := rl.GetGamepadAxisMovement(0, rl.GamepadAxisLeftX)
+		leftY := rl.GetGamepadAxisMovement(0, rl.GamepadAxisLeftY)
 
-		rightX := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisRightX)
-		rightY := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisRightY)
+		rightX := rl.GetGamepadAxisMovement(0, rl.GamepadAxisRightX)
+		rightY := rl.GetGamepadAxisMovement(0, rl.GamepadAxisRightY)
 
-		rightTrigger := raylib.GetGamepadAxisMovement(0, raylib.GamepadXboxAxisRt)
+		rightTrigger := rl.GetGamepadAxisMovement(0, rl.GamepadAxisRightTrigger)
 
 		ctrl.Move.X = g.Length(leftX * float32(g.M))
 		ctrl.Move.Y = g.Length(leftY * float32(g.M))
