@@ -13,11 +13,6 @@ type Model struct {
 	Pose *pose.Body
 
 	Shader rl.Shader
-	Loc    struct {
-		MatrixModel int32
-		MatrixView  int32
-		VectorView  int32
-	}
 
 	Head rl.Model
 	Body rl.Model
